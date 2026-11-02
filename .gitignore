@@ -1,0 +1,26 @@
+# Dependencies
+node_modules/
+backend/node_modules/
+frontend/node_modules/
+
+# Environment variables
+.env
+backend/.env
+frontend/.env
+*.env.local
+
+# Build outputs
+dist/
+backend/dist/
+frontend/dist/
+
+# Development reference & scratch (per instruction: don't push reference folder)
+reference/
+.playwright-mcp/
+/*.png
+query
+
+# OS & Logs
+*.log
+.DS_Store
+Thumbs.db

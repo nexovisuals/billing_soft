@@ -1,0 +1,102 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+@layer base {
+  * {
+    border-color: #E2E8F0;
+  }
+  
+  body {
+    background-color: #FFFFFF;
+    color: #0F172A;
+    font-family: 'Poppins', 'Inter', sans-serif;
+    -webkit-font-smoothing: antialiased;
+    -moz-osx-font-smoothing: grayscale;
+  }
+}
+
+/* Custom minimal scrollbar */
+::-webkit-scrollbar {
+  width: 6px;
+  height: 6px;
+}
+
+::-webkit-scrollbar-track {
+  background: transparent;
+}
+
+::-webkit-scrollbar-thumb {
+  background: #CBD5E1;
+  border-radius: 9999px;
+}
+
+::-webkit-scrollbar-thumb:hover {
+  background: #94A3B8;
+}
+
+/* Dedicated Pixel-Perfect Print Stylesheet */
+@media print {
+  /* Hide all app chrome: dock, header, modals backdrop, buttons */
+  aside, nav, header, button, .no-print {
+    display: none !important;
+  }
+
+  body, html {
+    background: #FFFFFF !important;
+    color: #000000 !important;
+    margin: 0 !important;
+    padding: 0 !important;
+    box-shadow: none !important;
+  }
+
+  #dc-print-sheet, #invoice-print-sheet {
+    box-shadow: none !important;
+    border: none !important;
+    padding: 0 !important;
+    margin: 0 !important;
+    max-width: 100% !important;
+    width: 100% !important;
+  }
+
+  @page {
+    size: A4 portrait;
+    margin: 12mm 15mm 12mm 15mm;
+  }
+}
+
+/* Mobile Touch & Momentum Scrolling Utilities */
+.touch-scroll {
+  -webkit-overflow-scrolling: touch;
+  overscroll-behavior: contain;
+}
+
+/* Hide native up/down stepper arrows on all number inputs */
+input[type="number"]::-webkit-outer-spin-button,
+input[type="number"]::-webkit-inner-spin-button {
+  -webkit-appearance: none !important;
+  margin: 0 !important;
+}
+
+input[type="number"] {
+  -moz-appearance: textfield !important;
+  appearance: textfield !important;
+}
+
+* {
+  -webkit-tap-highlight-color: transparent;
+}
+
+button, nav, .select-none {
+  user-select: none;
+  -webkit-user-select: none;
+}
+
+/* Ensure all input, textarea, and select text is normal (regular) font weight, not bold or dark */
+input, textarea, select {
+  font-weight: 400 !important;
+  color: #0F172A !important;
+}
+
+
+
