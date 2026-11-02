@@ -1,4 +1,4 @@
-import { Response } from 'express';
+import { Request, Response } from 'express';
 import { z } from 'zod';
 import bcryptjs from 'bcryptjs';
 import prisma from '../prisma.js';
@@ -481,7 +481,7 @@ export async function updateWorkerProfile(req: AuthRequest, res: Response): Prom
 }
 
 // Admin: Delete worker profile
-export async function deleteWorkerProfile(req: AuthRequest, res: Response): Promise<void> {
+export async function deleteWorkerProfile(req: Request, res: Response): Promise<void> {
   try {
     const { id } = req.params;
     const profile = await prisma.workerProfile.findUnique({ where: { id } });

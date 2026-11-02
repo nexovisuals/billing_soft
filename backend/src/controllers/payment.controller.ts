@@ -96,7 +96,7 @@ export async function recordPayment(req: AuthRequest, res: Response): Promise<vo
       return;
     }
 
-    let invoice = null;
+    let invoice: any = null;
     if (invoiceId) {
       invoice = await prisma.invoice.findUnique({ where: { id: invoiceId } });
       if (!invoice) {
@@ -127,7 +127,7 @@ export async function recordPayment(req: AuthRequest, res: Response): Promise<vo
         },
       });
 
-      let updatedInvoice = null;
+      let updatedInvoice: any = null;
       if (invoiceId && invoice) {
         const curPaid = Number(invoice.paidAmount);
         const total = Number(invoice.totalAmount);

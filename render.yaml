@@ -46,3 +46,4 @@ databases:
     plan: free
     databaseName: cnc_billing
     user: svt_admin
+

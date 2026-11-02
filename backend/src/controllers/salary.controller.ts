@@ -467,7 +467,7 @@ export async function syncSalaryRecordsForMonth(monthYear: string): Promise<any[
     orderBy: { employeeId: 'asc' },
   });
 
-  const records = [];
+  const records: any[] = [];
   for (const worker of workers) {
     const baseSalary = Number(worker.monthlySalary);
     const standardDays = 26;
