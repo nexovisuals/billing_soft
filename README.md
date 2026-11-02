@@ -1,39 +1,76 @@
 # CNC Machining Billing & Material Management Software
 ### Client: Shri Varshini Technologies (Job Work & CNC Machining)
 
-Welcome to the project documentation. This system is designed for managing raw material inventory, Delivery Challans (DC), multi-month consolidated GST tax invoices, workshop purchases, operating expenses, worker attendance (26-day basis), overtime, extra shifts, daily production tracking, and financial ledgers.
+A production-ready workshop management, billing, material tracking, and workforce attendance PWA built for CNC machining job-work enterprises.
 
 ---
 
-## 📑 Documentation Index
+## 🚀 Live Cloud Deployment Guide (24/7 Access)
 
-To keep context clean and modular, the project documentation is divided into specialized documents:
+This project is fully decoupled into an Express + Prisma backend and a React + Vite frontend, ready to run 24/7 online even when your local machine is switched off.
 
-| File | Purpose | Status |
-| :--- | :--- | :--- |
-| **[`docs/01_ARCHITECTURE_AND_TECH_STACK.md`](file:///d:/project/billing_software/docs/01_ARCHITECTURE_AND_TECH_STACK.md)** | Full technology stack, deployment lifecycle, security model, and AI readiness | ✅ Approved |
-| **[`docs/02_DATABASE_SCHEMA_AND_MODELS.md`](file:///d:/project/billing_software/docs/02_DATABASE_SCHEMA_AND_MODELS.md)** | Prisma data models, PostgreSQL relational schema, constraints, and audit trails | ✅ Drafted |
-| **[`docs/03_BUSINESS_RULES_AND_CALCULATIONS.md`](file:///d:/project/billing_software/docs/03_BUSINESS_RULES_AND_CALCULATIONS.md)** | Math formulas (26-day salary, OT, GST, DC sequential locking, stock accounting) | ✅ Drafted |
-| **[`docs/04_UI_UX_DESIGN_SYSTEM.md`](file:///d:/project/billing_software/docs/04_UI_UX_DESIGN_SYSTEM.md)** | UI design rules matching reference images: Pure white `#FFFFFF`, black & grey palette, typography, PWA | ✅ Approved |
-| **[`docs/05_STEP_BY_STEP_ROADMAP_AND_TRACKER.md`](file:///d:/project/billing_software/docs/05_STEP_BY_STEP_ROADMAP_AND_TRACKER.md)** | **Live progress tracker**, step-by-step phases, checklist, and verification status | 🟡 Active |
-| **[`docs/06_PRINT_AND_PDF_TEMPLATES.md`](file:///d:/project/billing_software/docs/06_PRINT_AND_PDF_TEMPLATES.md)** | Pixel-perfect A4 specifications for Delivery Challans and Tax Invoices (SAC 998898) | ✅ Drafted |
+### Step 1: Set up Free Cloud PostgreSQL Database
+Choose any serverless or managed PostgreSQL provider:
+- **[Neon](https://neon.tech)** (Recommended - Free Serverless Postgres)
+- **[Supabase](https://supabase.com)** (Free Managed Postgres)
+- **[Render Postgres](https://render.com)** (Free Cloud Database)
 
----
+After creating your database project, copy the connection string URL:
+```text
+postgresql://user:password@host:port/database?sslmode=require
+```
 
-## 🚀 Development Quick Reference
-
-* **Frontend Port:** `http://localhost:5173` (Vite + React PWA)
-* **Backend API Port:** `http://localhost:5000` (Node.js Express + TypeScript)
-* **Database Studio:** `npx prisma studio` (Opens at `http://localhost:5555`)
-* **Environment Strategy:**
-  1. **Phase 1 (Development):** Local PostgreSQL (`localhost:5432`)
-  2. **Phase 2 (Client Demo):** Supabase PostgreSQL (Cloud Database via `.env`)
-  3. **Phase 3 (Production):** Hostinger VPS (Nginx + PM2 + Docker/Postgres)
+Push the database schema and initialize the root admin:
+```bash
+cd backend
+# Set DATABASE_URL in backend/.env to your cloud connection string
+npx prisma db push
+npx tsx prisma/clear_all_data.ts
+```
 
 ---
 
-## 📌 Development Rule of Thumb
-1. **Never skip steps:** Complete Step N with full verification before moving to Step N+1.
-2. **Update docs continually:** Whenever a feature is added or client feedback alters logic, immediately update [`docs/05_STEP_BY_STEP_ROADMAP_AND_TRACKER.md`](file:///d:/project/billing_software/docs/05_STEP_BY_STEP_ROADMAP_AND_TRACKER.md).
-3. **Verify UI URLs:** Surface active `localhost` URLs at each step so the user can test live in their browser.
+### Step 2: Deploy Backend (Render / Railway)
+1. Go to **[Render Dashboard](https://dashboard.render.com/)** -> **New Web Service**.
+2. Connect your GitHub repository: `nexovisuals/billing_soft`.
+3. Set the following configuration:
+   - **Root Directory:** `backend`
+   - **Environment:** `Node`
+   - **Build Command:** `npm install && npm run build`
+   - **Start Command:** `npm run start`
+4. Add **Environment Variables**:
+   - `DATABASE_URL`: *(Your cloud PostgreSQL connection string)*
+   - `JWT_SECRET`: *(A secure random string)*
+   - `NODE_ENV`: `production`
+   - `CLIENT_URL`: `*`
+5. Click **Deploy Web Service**. You will receive your backend public URL (e.g., `https://billing-backend.onrender.com`).
 
+---
+
+### Step 3: Deploy Frontend (Vercel / Netlify)
+1. Go to **[Vercel Dashboard](https://vercel.com/)** -> **Add New Project**.
+2. Select your GitHub repository: `nexovisuals/billing_soft`.
+3. Set the following configuration:
+   - **Framework Preset:** `Vite`
+   - **Root Directory:** `frontend`
+   - **Build Command:** `npm run build`
+   - **Output Directory:** `dist`
+4. Add **Environment Variables**:
+   - `VITE_API_URL`: *(Your Render backend URL, e.g. `https://billing-backend.onrender.com`)*
+5. Click **Deploy**. Vercel will give you a fast, production CDN link (e.g. `https://billing-soft.vercel.app`).
+
+---
+
+## 🔑 Initial Default Login
+
+| Role | Username | Password | Access |
+| :--- | :--- | :--- | :--- |
+| **Admin** | `admin` | `admin123` | Full control: Company creation, DC & Invoicing, Staff & Worker account creation, edit and delete permissions |
+
+---
+
+## 📑 Local Development
+
+* **Frontend:** `cd frontend && npm install && npm run dev` (Runs on `http://localhost:5173`)
+* **Backend:** `cd backend && npm install && npm run dev` (Runs on `http://localhost:5000`)
+* **Database Studio:** `cd backend && npx prisma studio` (Runs on `http://localhost:5555`)

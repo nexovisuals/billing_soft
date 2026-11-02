@@ -4,7 +4,8 @@
   "description": "Backend API for CNC Machining Billing & Material Management",
   "main": "dist/server.js",
   "scripts": {
-    "build": "tsc",
+    "build": "prisma generate && tsc",
+    "postinstall": "prisma generate",
     "start": "node dist/server.js",
     "dev": "tsx watch src/server.ts",
     "seed": "tsx prisma/seed.ts"

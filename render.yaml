@@ -1,0 +1,48 @@
+services:
+  # 1. Backend Web Service
+  - type: web
+    name: billing-backend
+    env: node
+    plan: free
+    rootDir: backend
+    buildCommand: npm install && npx prisma generate && npm run build
+    startCommand: npm run start
+    envVars:
+      - key: NODE_ENV
+        value: production
+      - key: PORT
+        value: 10000
+      - key: JWT_SECRET
+        generateValue: true
+      - key: CLIENT_URL
+        value: "*"
+      - key: DATABASE_URL
+        fromDatabase:
+          name: billing-db
+          property: connectionString
+
+  # 2. Frontend Static Site
+  - type: web
+    name: billing-frontend
+    env: static
+    plan: free
+    rootDir: frontend
+    buildCommand: npm install && npm run build
+    staticPublishPath: ./dist
+    routes:
+      - type: rewrite
+        source: /*
+        destination: /index.html
+    envVars:
+      - key: VITE_API_URL
+        fromService:
+          type: web
+          name: billing-backend
+          property: host
+
+databases:
+  # 3. Third-Party Managed PostgreSQL Database
+  - name: billing-db
+    plan: free
+    databaseName: cnc_billing
+    user: svt_admin
