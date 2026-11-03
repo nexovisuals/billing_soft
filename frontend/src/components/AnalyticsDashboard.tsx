@@ -97,12 +97,16 @@ export default function AnalyticsDashboard({ session, onNavigateTab }: Analytics
       } else if ((res.status >= 500 || res.status === 404) && retryCount < 4) {
         setWakingUp(true);
         setTimeout(() => fetchAnalytics(retryCount + 1), 4000);
+      } else {
+        setWakingUp(false);
       }
     } catch (err) {
       console.error('Failed to load dashboard analytics:', err);
       if (retryCount < 4) {
         setWakingUp(true);
         setTimeout(() => fetchAnalytics(retryCount + 1), 4000);
+      } else {
+        setWakingUp(false);
       }
     } finally {
       setLoading(false);
@@ -199,9 +203,17 @@ export default function AnalyticsDashboard({ session, onNavigateTab }: Analytics
 
       {/* Cloud Backend Connecting Indicator (for Render Free Tier Wakeups) */}
       {wakingUp && (
-        <div className="flex items-center gap-2 p-3 rounded-2xl bg-amber-50 border border-amber-200/80 text-amber-800 text-xs">
-          <Clock className="w-4 h-4 animate-spin text-amber-600 shrink-0" />
-          <span>Waking up cloud database server... Please wait a few seconds, your data is loading automatically.</span>
+        <div className="flex items-center justify-between p-3 rounded-2xl bg-amber-50 border border-amber-200/80 text-amber-800 text-xs">
+          <div className="flex items-center gap-2">
+            <Clock className="w-4 h-4 animate-spin text-amber-600 shrink-0" />
+            <span>Connecting to cloud backend... Please wait a few seconds, your data is loading automatically.</span>
+          </div>
+          <button
+            onClick={() => fetchAnalytics(0)}
+            className="px-2.5 py-1 rounded-xl bg-amber-100 hover:bg-amber-200 text-amber-900 font-semibold text-[11px] whitespace-nowrap shrink-0 transition-colors"
+          >
+            Retry Now
+          </button>
         </div>
       )}
 
