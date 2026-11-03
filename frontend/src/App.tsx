@@ -18,7 +18,9 @@ import {
   LogOut,
   Layers,
   ChevronRight,
-  Shield
+  Shield,
+  BarChart3,
+  Zap
 } from 'lucide-react';
 import { UserSession } from './types';
 import LoginView from './components/LoginView';
@@ -37,6 +39,7 @@ import SettingsManager from './components/SettingsManager';
 import UserManager from './components/UserManager';
 import NotificationPopover from './components/NotificationPopover';
 import PwaInstallPrompt from './components/PwaInstallPrompt';
+import ReportsManager from './components/ReportsManager';
 
 // Grouped Navigation structure with expandable sub-pages
 interface NavSubItem {
@@ -61,7 +64,7 @@ const navGroups: NavGroup[] = [
   },
   {
     id: 'inventory_group',
-    label: 'Inventory & Clients',
+    label: 'Customer & Stock',
     icon: Boxes,
     subItems: [
       { id: 'companies', label: 'Companies', icon: Building2 },
@@ -76,18 +79,32 @@ const navGroups: NavGroup[] = [
     subItems: [
       { id: 'dcs', label: 'Delivery Challans (DC)', icon: Truck },
       { id: 'invoices', label: 'Tax Invoices', icon: Receipt },
-      { id: 'payments', label: 'Payments & Ledgers', icon: CreditCard },
+      { id: 'payments', label: 'Customer Payments', icon: CreditCard },
+    ],
+  },
+  {
+    id: 'expenses_group',
+    label: 'Workshop Expenses',
+    icon: ShoppingBag,
+    subItems: [
+      { id: 'purchases', label: 'Purchases & Spares', icon: ShoppingBag },
+      { id: 'expenses', label: 'Other Operating Expenses', icon: Zap },
     ],
   },
   {
     id: 'operations_group',
-    label: 'Staff & Operations',
+    label: 'Workers & Operations',
     icon: Users,
     subItems: [
-      { id: 'workers', label: 'Workers & Production', icon: Users },
-      { id: 'attendance', label: 'Attendance (26-Day)', icon: Clock },
-      { id: 'purchases', label: 'Purchases & Spares', icon: ShoppingBag },
+      { id: 'workers', label: 'Workers Master', icon: Users },
+      { id: 'production', label: 'Daily Machining Work', icon: Layers },
+      { id: 'attendance', label: 'Attendance & Payroll', icon: Clock },
     ],
+  },
+  {
+    id: 'reports',
+    label: 'Reports Center',
+    icon: BarChart3,
   },
   {
     id: 'users',
@@ -514,11 +531,17 @@ export default function App() {
           ) : activeTab === 'payments' ? (
             <PaymentManager session={session} />
           ) : activeTab === 'purchases' ? (
-            <ExpenseManager session={session} />
+            <ExpenseManager session={session} defaultSubTab="purchases" />
+          ) : activeTab === 'expenses' ? (
+            <ExpenseManager session={session} defaultSubTab="operating" />
           ) : activeTab === 'workers' ? (
-            <ProductionManager session={session} />
+            <ProductionManager session={session} defaultSubTab="workers" />
+          ) : activeTab === 'production' ? (
+            <ProductionManager session={session} defaultSubTab="queue" />
           ) : activeTab === 'attendance' ? (
             <SalaryManager session={session} />
+          ) : activeTab === 'reports' ? (
+            <ReportsManager session={session} />
           ) : activeTab === 'settings' ? (
             <SettingsManager session={session} />
           ) : (

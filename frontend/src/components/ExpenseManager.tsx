@@ -48,10 +48,17 @@ interface OtherExpenseItem {
 
 interface ExpenseManagerProps {
   session: UserSession;
+  defaultSubTab?: 'purchases' | 'operating';
 }
 
-export default function ExpenseManager({ session }: ExpenseManagerProps) {
-  const [activeTab, setActiveTab] = useState<'purchases' | 'operating'>('purchases');
+export default function ExpenseManager({ session, defaultSubTab = 'purchases' }: ExpenseManagerProps) {
+  const [activeTab, setActiveTab] = useState<'purchases' | 'operating'>(defaultSubTab);
+
+  useEffect(() => {
+    if (defaultSubTab) {
+      setActiveTab(defaultSubTab);
+    }
+  }, [defaultSubTab]);
   const [purchases, setPurchases] = useState<PurchaseItem[]>([]);
   const [expenses, setExpenses] = useState<OtherExpenseItem[]>([]);
   const [summary, setSummary] = useState({

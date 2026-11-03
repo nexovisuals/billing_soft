@@ -70,10 +70,17 @@ interface WorkerProfileItem {
 
 interface ProductionManagerProps {
   session: UserSession;
+  defaultSubTab?: 'queue' | 'workers';
 }
 
-export default function ProductionManager({ session }: ProductionManagerProps) {
-  const [activeTab, setActiveTab] = useState<'queue' | 'workers'>('queue');
+export default function ProductionManager({ session, defaultSubTab = 'queue' }: ProductionManagerProps) {
+  const [activeTab, setActiveTab] = useState<'queue' | 'workers'>(defaultSubTab);
+
+  useEffect(() => {
+    if (defaultSubTab) {
+      setActiveTab(defaultSubTab);
+    }
+  }, [defaultSubTab]);
   const [entries, setEntries] = useState<DailyWorkItem[]>([]);
   const [workers, setWorkers] = useState<WorkerProfileItem[]>([]);
   const [companies, setCompanies] = useState<Array<{ id: string; name: string }>>([]);

@@ -35,8 +35,11 @@ interface PendingDCItem {
   material?: {
     id: string;
     productName: string;
+    rate?: string | number | null;
     defaultRate?: string | number | null;
     hsnSacCode?: string | null;
+    gstRate?: string | number | null;
+    uom?: string | null;
   } | null;
 }
 
@@ -323,7 +326,13 @@ export default function InvoiceManager({ session }: InvoiceManagerProps) {
       dc.items.forEach(it => {
         const key = it.partNumber || it.description;
         const qty = parseFloat(it.quantity.toString() || '0');
-        const defaultRate = it.material?.defaultRate ? parseFloat(it.material.defaultRate.toString()) : 75.0;
+        const rawRate = (it.material as any)?.rate ?? (it.material as any)?.defaultRate;
+        const defaultRate = (rawRate !== undefined && rawRate !== null && !isNaN(parseFloat(rawRate.toString())) && parseFloat(rawRate.toString()) > 0)
+          ? parseFloat(rawRate.toString())
+          : 0;
+        const itemHsn = it.material?.hsnSacCode || '998898';
+        const itemUom = it.uom || (it.material as any)?.uom || 'nos';
+        const itemGst = (it.material as any)?.gstRate != null ? parseFloat((it.material as any).gstRate.toString()) : 18.0;
 
         if (itemMap.has(key)) {
           const existing = itemMap.get(key)!;
@@ -334,11 +343,11 @@ export default function InvoiceManager({ session }: InvoiceManagerProps) {
             materialId: it.materialId || null,
             description: it.description,
             partNumber: it.partNumber || null,
-            hsnSacCode: it.material?.hsnSacCode || '998898',
+            hsnSacCode: itemHsn,
             quantity: qty,
             rate: defaultRate,
-            uom: it.uom || 'nos',
-            gstRate: 18.0,
+            uom: itemUom,
+            gstRate: itemGst,
             amount: Math.round(qty * defaultRate * 100) / 100,
           });
         }

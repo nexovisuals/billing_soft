@@ -68,7 +68,7 @@ export async function getDeliveryChallans(req: AuthRequest, res: Response): Prom
         },
         items: {
           include: {
-            material: { select: { productName: true, drawingNumber: true, partNumber: true, rate: true } },
+            material: { select: { id: true, productName: true, drawingNumber: true, partNumber: true, rate: true, uom: true, hsnSacCode: true, gstRate: true } },
           },
         },
         invoice: {
