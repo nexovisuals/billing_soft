@@ -29,6 +29,7 @@ const movementSchema = z.object({
   ]),
   quantityIn: z.number().min(0).default(0),
   quantityOut: z.number().min(0).default(0),
+  uom: z.string().optional().nullable(),
   referenceDcId: z.string().optional().nullable(),
   remarks: z.string().optional().nullable(),
 });
@@ -88,7 +89,7 @@ export async function createRawMaterialReceipt(req: AuthRequest, res: Response):
         quantityIn: data.quantity,
         quantityOut: 0,
         balance: newBalance,
-        remarks: `Customer DC: ${data.challanNumber || 'N/A'} • Material: ${data.materialName}${
+        remarks: `Customer DC: ${data.challanNumber || 'N/A'} • Material: ${data.materialName} (${data.uom})${
           data.remarks ? ' • ' + data.remarks : ''
         }`,
       },
@@ -245,26 +246,28 @@ export async function getRawMaterialReceipts(req: AuthRequest, res: Response): P
   }
 }
 
-// GET /api/stock/ledger - Get company-wise stock ledger
+// GET /api/stock/ledger - Get company-wise or workshop-wide stock ledger
 export async function getCompanyLedger(req: AuthRequest, res: Response): Promise<void> {
   try {
     const { companyId } = req.query;
-    if (!companyId || typeof companyId !== 'string') {
-      res.status(400).json({ error: 'companyId is required to view stock ledger' });
-      return;
+    const where: any = {};
+    if (companyId && typeof companyId === 'string' && companyId !== 'ALL') {
+      where.companyId = companyId;
     }
 
     const ledger = await prisma.companyStockLedger.findMany({
-      where: { companyId },
+      where,
       include: {
         company: { select: { name: true } },
         material: { select: { productName: true, partNumber: true } },
       },
       orderBy: { transactionDate: 'desc' },
-      take: 100,
+      take: 200,
     });
 
-    const currentBalance = await getCompanyCurrentBalance(companyId);
+    const currentBalance = companyId && typeof companyId === 'string' && companyId !== 'ALL'
+      ? await getCompanyCurrentBalance(companyId)
+      : 0;
 
     res.status(200).json({ ledger, currentBalance });
   } catch (error: any) {
@@ -281,6 +284,13 @@ export async function getStockSummary(req: AuthRequest, res: Response): Promise<
       select: {
         id: true,
         name: true,
+        receipts: {
+          select: {
+            quantity: true,
+            uom: true,
+            materialName: true,
+          },
+        },
         stockLedger: {
           orderBy: { createdAt: 'desc' },
           take: 1,
@@ -300,6 +310,11 @@ export async function getStockSummary(req: AuthRequest, res: Response): Promise<
       lastUpdated: c.stockLedger[0]?.transactionDate || null,
       receiptsCount: c._count.receipts,
       challansCount: c._count.challans,
+      receipts: c.receipts.map((r) => ({
+        quantity: Number(r.quantity),
+        uom: r.uom,
+        materialName: r.materialName,
+      })),
     }));
 
     res.status(200).json({ summary });
@@ -324,13 +339,14 @@ export async function recordStockMovement(req: AuthRequest, res: Response): Prom
     // Negative stock protection
     if (data.quantityOut > currentBalance) {
       res.status(400).json({
-        error: `Negative stock prevented! Requested outward quantity (${data.quantityOut} kg) exceeds current available balance (${currentBalance} kg).`,
+        error: `Negative stock prevented! Requested outward quantity (${data.quantityOut} ${data.uom || 'units'}) exceeds current available balance (${currentBalance} ${data.uom || 'units'}).`,
       });
       return;
     }
 
     const newBalance = currentBalance + data.quantityIn - data.quantityOut;
 
+    const unitTag = data.uom ? ` [${data.uom}]` : '';
     const entry = await prisma.companyStockLedger.create({
       data: {
         companyId: data.companyId,
@@ -340,7 +356,7 @@ export async function recordStockMovement(req: AuthRequest, res: Response): Prom
         quantityOut: data.quantityOut,
         balance: newBalance,
         referenceDcId: data.referenceDcId || null,
-        remarks: data.remarks || null,
+        remarks: `${data.remarks ? data.remarks : ''}${unitTag}`.trim() || null,
       },
     });
 

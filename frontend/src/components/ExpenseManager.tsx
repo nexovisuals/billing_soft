@@ -48,17 +48,31 @@ interface OtherExpenseItem {
 
 interface ExpenseManagerProps {
   session: UserSession;
+  pageMode?: 'purchases' | 'operating';
   defaultSubTab?: 'purchases' | 'operating';
 }
 
-export default function ExpenseManager({ session, defaultSubTab = 'purchases' }: ExpenseManagerProps) {
-  const [activeTab, setActiveTab] = useState<'purchases' | 'operating'>(defaultSubTab);
+const STANDARD_PURCHASE_CATEGORIES = [
+  { value: 'Tooling', label: 'Tooling' },
+  { value: 'Coolant/Oil', label: 'Oil & Coolant' },
+  { value: 'Spares', label: 'Machine Spares' },
+  { value: 'Consumables', label: 'Consumables' },
+  { value: 'Hardware', label: 'Hardware' },
+  { value: 'OTHERS', label: 'Others' },
+];
 
-  useEffect(() => {
-    if (defaultSubTab) {
-      setActiveTab(defaultSubTab);
-    }
-  }, [defaultSubTab]);
+const STANDARD_EXPENSE_CATEGORIES = [
+  { value: 'Electricity (EB)', label: 'Electricity (EB Power)' },
+  { value: 'Workshop Rent', label: 'Workshop Rent' },
+  { value: 'Machine Maintenance', label: 'Machine Maintenance & Repairs' },
+  { value: 'Transport/Diesel', label: 'Transport & Diesel' },
+  { value: 'Tea & Refreshments', label: 'Staff Welfare & Tea' },
+  { value: 'Office & Admin', label: 'Office & Administration' },
+  { value: 'OTHERS', label: 'Others' },
+];
+
+export default function ExpenseManager({ session, pageMode, defaultSubTab }: ExpenseManagerProps) {
+  const activeTab = pageMode || defaultSubTab || 'purchases';
   const [purchases, setPurchases] = useState<PurchaseItem[]>([]);
   const [expenses, setExpenses] = useState<OtherExpenseItem[]>([]);
   const [summary, setSummary] = useState({
@@ -68,7 +82,7 @@ export default function ExpenseManager({ session, defaultSubTab = 'purchases' }:
   });
 
   const [searchTerm, setSearchTerm] = useState('');
-  const [categoryFilter, setCategoryFilter] = useState('ALL');
+  const [categoryFilter, _setCategoryFilter] = useState('ALL');
   const [loading, setLoading] = useState(false);
 
   // Modals
@@ -83,6 +97,7 @@ export default function ExpenseManager({ session, defaultSubTab = 'purchases' }:
   const [purSupplier, setPurSupplier] = useState('');
   const [purItem, setPurItem] = useState('');
   const [purCategory, setPurCategory] = useState('Tooling');
+  const [purIsCustomCategory, setPurIsCustomCategory] = useState(false);
   const [purQty, setPurQty] = useState<number | ''>('');
   const [purUom, setPurUom] = useState('pcs');
   const [purPrice, setPurPrice] = useState<number | ''>('');
@@ -93,6 +108,7 @@ export default function ExpenseManager({ session, defaultSubTab = 'purchases' }:
 
   // Operating Expense Form Fields
   const [expCategory, setExpCategory] = useState('Electricity (EB)');
+  const [expIsCustomCategory, setExpIsCustomCategory] = useState(false);
   const [expDesc, setExpDesc] = useState('');
   const [expAmount, setExpAmount] = useState<number | ''>('');
   const [expDate, setExpDate] = useState(new Date().toISOString().split('T')[0]);
@@ -146,6 +162,8 @@ export default function ExpenseManager({ session, defaultSubTab = 'purchases' }:
     setPurSupplier(p.supplierName || '');
     setPurItem(p.itemName);
     setPurCategory(p.category);
+    const isCustomPur = !STANDARD_PURCHASE_CATEGORIES.some((c) => c.value === p.category && c.value !== 'OTHERS');
+    setPurIsCustomCategory(isCustomPur);
     setPurQty(Number(p.quantity));
     setPurUom(p.uom);
     setPurPrice(Number(p.unitPrice));
@@ -160,6 +178,8 @@ export default function ExpenseManager({ session, defaultSubTab = 'purchases' }:
   const openEditExpense = (e: OtherExpenseItem) => {
     setEditingExpenseId(e.id);
     setExpCategory(e.category);
+    const isCustomExp = !STANDARD_EXPENSE_CATEGORIES.some((c) => c.value === e.category && c.value !== 'OTHERS');
+    setExpIsCustomCategory(isCustomExp);
     setExpDesc(e.description);
     setExpAmount(Number(e.amount));
     setExpDate(e.expenseDate ? e.expenseDate.split('T')[0] : new Date().toISOString().split('T')[0]);
@@ -394,156 +414,110 @@ export default function ExpenseManager({ session, defaultSubTab = 'purchases' }:
       </AnimatePresence>
 
       {/* KPI Cards */}
-      <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-        <div className="p-5 rounded-2xl bg-white border border-slate-200/80 shadow-card">
+      <div className="grid grid-cols-2 gap-3 sm:gap-4">
+        <div className="p-3.5 sm:p-5 rounded-2xl bg-white border border-slate-200/80 shadow-card">
           <div className="flex items-center justify-between">
-            <span className="text-xs font-medium text-slate-500 uppercase tracking-wider">
-              Total Cash Outflow
+            <span className="text-[10px] sm:text-xs font-semibold text-slate-500 uppercase tracking-wider truncate">
+              Total Purchases
             </span>
-            <div className="w-9 h-9 rounded-xl bg-slate-100 flex items-center justify-center text-slate-800">
+            <div className="w-8 h-8 sm:w-9 sm:h-9 rounded-xl bg-slate-100 flex items-center justify-center text-slate-800 shrink-0">
               <ShoppingBag className="w-4 h-4" />
             </div>
           </div>
-          <div className="mt-3">
-            <span className="text-2xl font-semibold text-slate-900 tracking-tight">
-              ₹{summary.totalOutflow.toLocaleString('en-IN', { maximumFractionDigits: 0 })}
-            </span>
-            <span className="text-xs text-slate-500 ml-2">total expenditure</span>
-          </div>
-        </div>
-
-        <div className="p-5 rounded-2xl bg-white border border-slate-200/80 shadow-card">
-          <div className="flex items-center justify-between">
-            <span className="text-xs font-medium text-slate-500 uppercase tracking-wider">
-              Tooling & Spares Purchases
-            </span>
-            <div className="w-9 h-9 rounded-xl bg-slate-100 flex items-center justify-center text-slate-800">
-              <Wrench className="w-4 h-4" />
-            </div>
-          </div>
-          <div className="mt-3">
-            <span className="text-2xl font-semibold text-slate-900 tracking-tight">
+          <div className="mt-2 sm:mt-3">
+            <span className="text-lg sm:text-2xl font-bold text-slate-900 tracking-tight">
               ₹{summary.totalPurchases.toLocaleString('en-IN', { maximumFractionDigits: 0 })}
             </span>
-            <span className="text-xs text-slate-500 ml-2">inserts, oil, spares</span>
+            <span className="text-[10px] sm:text-xs text-slate-500 ml-1.5 sm:ml-2">tools, oil, spares</span>
           </div>
         </div>
 
-        <div className="p-5 rounded-2xl bg-white border border-slate-200/80 shadow-card">
+        <div className="p-3.5 sm:p-5 rounded-2xl bg-white border border-slate-200/80 shadow-card">
           <div className="flex items-center justify-between">
-            <span className="text-xs font-medium text-slate-500 uppercase tracking-wider">
-              Monthly Utilities & Admin
+            <span className="text-[10px] sm:text-xs font-semibold text-slate-500 uppercase tracking-wider truncate">
+              Total Other Expenses
             </span>
-            <div className="w-9 h-9 rounded-xl bg-slate-100 flex items-center justify-center text-slate-800">
+            <div className="w-8 h-8 sm:w-9 sm:h-9 rounded-xl bg-slate-100 flex items-center justify-center text-slate-800 shrink-0">
               <Zap className="w-4 h-4" />
             </div>
           </div>
-          <div className="mt-3">
-            <span className="text-2xl font-semibold text-slate-900 tracking-tight">
+          <div className="mt-2 sm:mt-3">
+            <span className="text-lg sm:text-2xl font-bold text-slate-900 tracking-tight">
               ₹{summary.totalOperating.toLocaleString('en-IN', { maximumFractionDigits: 0 })}
             </span>
-            <span className="text-xs text-slate-500 ml-2">electricity, rent, repairs</span>
+            <span className="text-[10px] sm:text-xs text-slate-500 ml-1.5 sm:ml-2">power, rent, upkeep</span>
           </div>
         </div>
       </div>
 
-      {/* Sub-Tabs Switcher & Controls */}
-      <div className="flex flex-col md:flex-row items-stretch md:items-center justify-between gap-4">
-        {/* Module Switcher Tabs */}
-        <div className="flex items-center gap-2 p-1 rounded-2xl bg-slate-100 border border-slate-200/80">
-          <button
-            onClick={() => {
-              setActiveTab('purchases');
-              setCategoryFilter('ALL');
-            }}
-            className={`flex items-center gap-2 px-4 py-2 rounded-xl text-xs font-medium transition-all ${
-              activeTab === 'purchases'
-                ? 'bg-white text-slate-950 shadow-sm'
-                : 'text-slate-600 hover:text-slate-950'
-            } whitespace-nowrap`}
-          >
-            <Wrench className="w-3.5 h-3.5" />
-            <span>Workshop Purchases & Tooling</span>
-          </button>
-          <button
-            onClick={() => {
-              setActiveTab('operating');
-              setCategoryFilter('ALL');
-            }}
-            className={`flex items-center gap-2 px-4 py-2 rounded-xl text-xs font-medium transition-all ${
-              activeTab === 'operating'
-                ? 'bg-white text-slate-950 shadow-sm'
-                : 'text-slate-600 hover:text-slate-950'
-            } whitespace-nowrap`}
-          >
-            <Zap className="w-3.5 h-3.5" />
-            <span>Operating Expenses & Utilities</span>
-          </button>
+      {/* Search and Action Bar */}
+      <div className="flex flex-col sm:flex-row items-stretch sm:items-center justify-between gap-4">
+        <div className="relative flex-1 sm:max-w-xs">
+          <Search className="w-4 h-4 text-slate-400 absolute left-3.5 top-1/2 -translate-y-1/2" />
+          <input
+            type="text"
+            placeholder={activeTab === 'purchases' ? 'Search item, supplier, bill...' : 'Search expenses, electricity, rent...'}
+            value={searchTerm}
+            onChange={e => setSearchTerm(e.target.value)}
+            className="w-full pl-9 pr-4 py-2.5 rounded-2xl bg-white border border-slate-200 text-xs text-slate-900 placeholder:text-slate-400 focus:outline-none focus:border-slate-300 shadow-sm"
+          />
         </div>
 
-        {/* Search & Action Buttons */}
-        <div className="flex items-center gap-3">
-          <div className="relative flex-1 md:w-64">
-            <Search className="w-4 h-4 text-slate-400 absolute left-3.5 top-1/2 -translate-y-1/2" />
-            <input
-              type="text"
-              placeholder={`Search ${activeTab === 'purchases' ? 'tools, spares, supplier...' : 'expenses, EB, rent...'}`}
-              value={searchTerm}
-              onChange={e => setSearchTerm(e.target.value)}
-              className="w-full pl-9 pr-4 py-2 rounded-2xl bg-white border border-slate-200 text-xs text-slate-900 placeholder:text-slate-400 focus:outline-none focus:border-slate-300 shadow-sm"
-            />
-          </div>
-
-          {(session.role === 'ADMIN' || session.role === 'STAFF') && (
-            activeTab === 'purchases' ? (
-              <button
-                onClick={() => {
-                  setEditingPurchaseId(null);
-                  setPurItem('');
-                  setPurSupplier('');
-                  setPurPrice('');
-                  setPurBillNo('');
-                  setPurRemarks('');
-                  setFormError(null);
-                  setPurchaseModalOpen(true);
-                }}
-                className="flex items-center gap-2 px-4 py-2 rounded-2xl bg-white border border-slate-300 text-slate-900 text-xs font-semibold hover:bg-slate-50 hover:border-slate-400 transition-all shadow-2xs whitespace-nowrap"
-              >
-                <Plus className="w-4 h-4" />
-                <span>Add Tooling / Spare Purchase</span>
-              </button>
-            ) : (
-              <button
-                onClick={() => {
-                  setEditingExpenseId(null);
-                  setExpDesc('');
-                  setExpAmount('');
-                  setExpRefNo('');
-                  setExpRemarks('');
-                  setFormError(null);
-                  setExpenseModalOpen(true);
-                }}
-                className="flex items-center gap-2 px-4 py-2 rounded-2xl bg-white border border-slate-300 text-slate-900 text-xs font-semibold hover:bg-slate-50 hover:border-slate-400 transition-all shadow-2xs whitespace-nowrap"
-              >
-                <Plus className="w-4 h-4" />
-                <span>Record Utility Expense</span>
-              </button>
-            )
-          )}
-        </div>
+        {(session.role === 'ADMIN' || session.role === 'STAFF') && (
+          activeTab === 'purchases' ? (
+            <button
+              onClick={() => {
+                setEditingPurchaseId(null);
+                setPurItem('');
+                setPurSupplier('');
+                setPurCategory('Tooling');
+                setPurIsCustomCategory(false);
+                setPurQty('');
+                setPurUom('pcs');
+                setPurPrice('');
+                setPurBillNo('');
+                setPurRemarks('');
+                setFormError(null);
+                setPurchaseModalOpen(true);
+              }}
+              className="flex items-center gap-2 px-4 py-2.5 rounded-2xl bg-white border border-slate-300 text-slate-900 text-xs font-semibold hover:bg-slate-50 hover:border-slate-400 transition-all shadow-2xs whitespace-nowrap shrink-0"
+            >
+              <Plus className="w-4 h-4 shrink-0" />
+              <span>Add Purchase</span>
+            </button>
+          ) : (
+            <button
+              onClick={() => {
+                setEditingExpenseId(null);
+                setExpCategory('Electricity (EB)');
+                setExpIsCustomCategory(false);
+                setExpDesc('');
+                setExpAmount('');
+                setExpRefNo('');
+                setExpRemarks('');
+                setFormError(null);
+                setExpenseModalOpen(true);
+              }}
+              className="flex items-center gap-2 px-4 py-2.5 rounded-2xl bg-white border border-slate-300 text-slate-900 text-xs font-semibold hover:bg-slate-50 hover:border-slate-400 transition-all shadow-2xs whitespace-nowrap shrink-0"
+            >
+              <Plus className="w-4 h-4 shrink-0" />
+              <span>Add Expense</span>
+            </button>
+          )
+        )}
       </div>
 
       {/* Content View 1: Purchases Table */}
       {activeTab === 'purchases' ? (
-        <div className="bg-white border border-slate-200/80 rounded-3xl shadow-card overflow-hidden">
-          <div className="overflow-x-auto">
-            <table className="w-full text-left text-xs text-slate-700">
+        <div className="bg-white border border-slate-200/80 rounded-2xl sm:rounded-3xl shadow-card overflow-hidden w-full max-w-full">
+          <div className="overflow-x-auto w-full max-w-full">
+            <table className="w-full min-w-[700px] text-left text-xs text-slate-700">
               <thead className="bg-slate-50/75 border-b border-slate-200/80 text-[11px] font-semibold text-slate-500 uppercase tracking-wider">
                 <tr>
                   <th className="py-3.5 px-4 whitespace-nowrap text-left">Date</th>
-                  <th className="py-3.5 px-4 whitespace-nowrap text-left">Item & Tool Description</th>
+                  <th className="py-3.5 px-4 whitespace-nowrap text-left">Item Name</th>
                   <th className="py-3.5 px-4 whitespace-nowrap text-left">Category</th>
-                  <th className="py-3.5 px-4 whitespace-nowrap text-left">Supplier & Bill No</th>
+                  <th className="py-3.5 px-4 whitespace-nowrap text-left">Supplier</th>
                   <th className="py-3.5 px-4 text-left whitespace-nowrap">Quantity</th>
                   <th className="py-3.5 px-4 text-left whitespace-nowrap">Unit Price</th>
                   <th className="py-3.5 px-4 text-left whitespace-nowrap">Total Amount (₹)</th>
@@ -554,14 +528,14 @@ export default function ExpenseManager({ session, defaultSubTab = 'purchases' }:
                 {loading ? (
                   <tr>
                     <td colSpan={8} className="py-12 text-center text-slate-400 whitespace-nowrap">
-                      Loading workshop purchases...
+                      Loading purchases...
                     </td>
                   </tr>
                 ) : filteredPurchases.length === 0 ? (
                   <tr>
                     <td colSpan={8} className="py-12 text-center text-slate-400 whitespace-nowrap">
                       <Wrench className="w-8 h-8 mx-auto mb-2 text-slate-300" />
-                      No workshop tooling or spares purchases found. Click "+ Add Tooling / Spare Purchase" to log workshop supplies.
+                      No purchases found. Click "+ Add Purchase" to record new items.
                     </td>
                   </tr>
                 ) : (
@@ -631,16 +605,16 @@ export default function ExpenseManager({ session, defaultSubTab = 'purchases' }:
         </div>
       ) : (
         /* Content View 2: Operating Expenses Table */
-        <div className="bg-white border border-slate-200/80 rounded-3xl shadow-card overflow-hidden">
-          <div className="overflow-x-auto">
-            <table className="w-full text-left text-xs text-slate-700">
+        <div className="bg-white border border-slate-200/80 rounded-2xl sm:rounded-3xl shadow-card overflow-hidden w-full max-w-full">
+          <div className="overflow-x-auto w-full max-w-full">
+            <table className="w-full min-w-[700px] text-left text-xs text-slate-700">
               <thead className="bg-slate-50/75 border-b border-slate-200/80 text-[11px] font-semibold text-slate-500 uppercase tracking-wider">
                 <tr>
                   <th className="py-3.5 px-4 whitespace-nowrap text-left">Date</th>
-                  <th className="py-3.5 px-4 whitespace-nowrap text-left">Expense Category</th>
+                  <th className="py-3.5 px-4 whitespace-nowrap text-left">Category</th>
                   <th className="py-3.5 px-4 whitespace-nowrap text-left">Description</th>
                   <th className="py-3.5 px-4 whitespace-nowrap text-left">Payment Mode</th>
-                  <th className="py-3.5 px-4 whitespace-nowrap text-left">Ref / Receipt No</th>
+                  <th className="py-3.5 px-4 whitespace-nowrap text-left">Bill Number</th>
                   <th className="py-3.5 px-4 text-left whitespace-nowrap">Amount (₹)</th>
                   <th className="py-3.5 px-4 text-left whitespace-nowrap">Actions</th>
                 </tr>
@@ -649,14 +623,14 @@ export default function ExpenseManager({ session, defaultSubTab = 'purchases' }:
                 {loading ? (
                   <tr>
                     <td colSpan={7} className="py-12 text-center text-slate-400 whitespace-nowrap">
-                      Loading utility expenses...
+                      Loading expenses...
                     </td>
                   </tr>
                 ) : filteredExpenses.length === 0 ? (
                   <tr>
                     <td colSpan={7} className="py-12 text-center text-slate-400 whitespace-nowrap">
                       <Zap className="w-8 h-8 mx-auto mb-2 text-slate-300" />
-                      No operating expenses recorded yet. Click "+ Record Utility Expense" to track EB bills, workshop rent, and maintenance.
+                      No expenses found. Click "+ Add Expense" to record new expenses.
                     </td>
                   </tr>
                 ) : (
@@ -721,8 +695,8 @@ export default function ExpenseManager({ session, defaultSubTab = 'purchases' }:
       <SlideOverDrawer
         isOpen={purchaseModalOpen}
         onClose={() => setPurchaseModalOpen(false)}
-        title={editingPurchaseId ? "Edit Tooling / Spare Purchase" : "Add Tooling / Spare Purchase"}
-        subtitle="Record carbide inserts, cutting oil, spares, and hardware"
+        title={editingPurchaseId ? "Edit Purchase" : "Add Purchase"}
+        subtitle="Record cutting inserts, oil, spares, and hardware"
         footer={
           <>
             <button
@@ -753,7 +727,7 @@ export default function ExpenseManager({ session, defaultSubTab = 'purchases' }:
         <form id="purchase-form" onSubmit={handlePurchaseSubmit} className="space-y-4 text-xs">
           <div>
             <label className="block text-[11px] font-semibold text-slate-700 mb-1.5 uppercase tracking-wider">
-              Item / Tool Name *
+              Item Name *
             </label>
             <input
               type="text"
@@ -769,18 +743,44 @@ export default function ExpenseManager({ session, defaultSubTab = 'purchases' }:
               <label className="block text-[11px] font-semibold text-slate-700 mb-1.5 uppercase tracking-wider">
                 Category *
               </label>
-              <CustomSelect
-                value={purCategory}
-                onChange={(val) => setPurCategory(val)}
-                options={[
-                  { value: 'Tooling', label: 'Tooling (Inserts, Cutters)' },
-                  { value: 'Coolant/Oil', label: 'Coolant / Hydraulic Oil' },
-                  { value: 'Spares', label: 'Machine Spares' },
-                  { value: 'Consumables', label: 'Consumables & Grinding' },
-                  { value: 'Hardware', label: 'Hardware & Fasteners' },
-                ]}
-                searchable={false}
-              />
+              {purIsCustomCategory ? (
+                <div className="relative flex items-center">
+                  <input
+                    type="text"
+                    required
+                    autoFocus
+                    placeholder="Enter custom category..."
+                    value={purCategory}
+                    onChange={(e) => setPurCategory(e.target.value)}
+                    className="w-full pl-3.5 pr-9 py-2.5 rounded-xl bg-white border border-slate-200 text-xs text-slate-900 focus:border-slate-300 outline-none"
+                  />
+                  <button
+                    type="button"
+                    onClick={() => {
+                      setPurIsCustomCategory(false);
+                      setPurCategory('Tooling');
+                    }}
+                    title="Cancel and choose from list"
+                    className="absolute right-2 p-1.5 rounded-lg text-slate-400 hover:text-slate-600 hover:bg-slate-100 transition-colors"
+                  >
+                    <X className="w-3.5 h-3.5" />
+                  </button>
+                </div>
+              ) : (
+                <CustomSelect
+                  value={purCategory}
+                  onChange={(val) => {
+                    if (val === 'OTHERS') {
+                      setPurIsCustomCategory(true);
+                      setPurCategory('');
+                    } else {
+                      setPurCategory(val);
+                    }
+                  }}
+                  options={STANDARD_PURCHASE_CATEGORIES}
+                  searchable={false}
+                />
+              )}
             </div>
 
             <div>
@@ -814,7 +814,7 @@ export default function ExpenseManager({ session, defaultSubTab = 'purchases' }:
 
             <div>
               <label className="block text-[11px] font-semibold text-slate-700 mb-1.5 uppercase tracking-wider">
-                Unit (UOM)
+                Unit *
               </label>
               <CustomUnitSelect
                 value={purUom}
@@ -825,7 +825,7 @@ export default function ExpenseManager({ session, defaultSubTab = 'purchases' }:
 
             <div>
               <label className="block text-[11px] font-semibold text-slate-700 mb-1.5 uppercase tracking-wider">
-                Unit Price (₹) *
+                Unit Price *
               </label>
               <input
                 type="number"
@@ -842,7 +842,7 @@ export default function ExpenseManager({ session, defaultSubTab = 'purchases' }:
           <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
             <div>
               <label className="block text-[11px] font-semibold text-slate-700 mb-1.5 uppercase tracking-wider">
-                Supplier Bill No
+                Bill Number
               </label>
               <input
                 type="text"
@@ -854,14 +854,14 @@ export default function ExpenseManager({ session, defaultSubTab = 'purchases' }:
 
             <div>
               <label className="block text-[11px] font-semibold text-slate-700 mb-1.5 uppercase tracking-wider">
-                Payment Status
+                Payment Status *
               </label>
               <CustomSelect
                 value={purStatus}
                 onChange={(val) => setPurStatus(val)}
                 options={[
                   { value: 'PAID', label: 'Paid' },
-                  { value: 'PENDING', label: 'Pending / Due' },
+                  { value: 'PENDING', label: 'Pending' },
                 ]}
                 searchable={false}
               />
@@ -894,8 +894,8 @@ export default function ExpenseManager({ session, defaultSubTab = 'purchases' }:
       <SlideOverDrawer
         isOpen={expenseModalOpen}
         onClose={() => setExpenseModalOpen(false)}
-        title={editingExpenseId ? "Edit Utility Expense" : "Record Operating Utility Expense"}
-        subtitle="Log electricity bills, workshop rent, repairs, and overheads"
+        title={editingExpenseId ? "Edit Expense" : "Add Expense"}
+        subtitle="Record electricity, workshop rent, repairs, and overheads"
         footer={
           <>
             <button
@@ -927,21 +927,46 @@ export default function ExpenseManager({ session, defaultSubTab = 'purchases' }:
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
             <div>
               <label className="block text-[11px] font-semibold text-slate-700 mb-1.5 uppercase tracking-wider">
-                Expense Category *
+                Category *
               </label>
-              <CustomSelect
-                value={expCategory}
-                onChange={(val) => setExpCategory(val)}
-                options={[
-                  { value: 'Electricity (EB)', label: 'Electricity (EB Power)' },
-                  { value: 'Workshop Rent', label: 'Workshop Rent' },
-                  { value: 'Machine Maintenance', label: 'Machine Maintenance / Repairs' },
-                  { value: 'Transport/Diesel', label: 'Transport & Diesel' },
-                  { value: 'Tea & Refreshments', label: 'Staff Welfare & Tea' },
-                  { value: 'Office & Admin', label: 'Office & Administration' },
-                ]}
-                searchable={false}
-              />
+              {expIsCustomCategory ? (
+                <div className="relative flex items-center">
+                  <input
+                    type="text"
+                    required
+                    autoFocus
+                    placeholder="Enter custom expense category..."
+                    value={expCategory}
+                    onChange={(e) => setExpCategory(e.target.value)}
+                    className="w-full pl-3.5 pr-9 py-2.5 rounded-xl bg-white border border-slate-200 text-xs text-slate-900 focus:border-slate-300 outline-none"
+                  />
+                  <button
+                    type="button"
+                    onClick={() => {
+                      setExpIsCustomCategory(false);
+                      setExpCategory('Electricity (EB)');
+                    }}
+                    title="Cancel and choose from list"
+                    className="absolute right-2 p-1.5 rounded-lg text-slate-400 hover:text-slate-600 hover:bg-slate-100 transition-colors"
+                  >
+                    <X className="w-3.5 h-3.5" />
+                  </button>
+                </div>
+              ) : (
+                <CustomSelect
+                  value={expCategory}
+                  onChange={(val) => {
+                    if (val === 'OTHERS') {
+                      setExpIsCustomCategory(true);
+                      setExpCategory('');
+                    } else {
+                      setExpCategory(val);
+                    }
+                  }}
+                  options={STANDARD_EXPENSE_CATEGORIES}
+                  searchable={false}
+                />
+              )}
             </div>
 
             <div>
@@ -962,7 +987,7 @@ export default function ExpenseManager({ session, defaultSubTab = 'purchases' }:
 
           <div>
             <label className="block text-[11px] font-semibold text-slate-700 mb-1.5 uppercase tracking-wider">
-              Description / Purpose *
+              Description *
             </label>
             <input
               type="text"
@@ -994,7 +1019,7 @@ export default function ExpenseManager({ session, defaultSubTab = 'purchases' }:
                 onChange={(val) => setExpMode(val)}
                 options={[
                   { value: 'Net Banking', label: 'Net Banking' },
-                  { value: 'UPI', label: 'UPI / GPay' },
+                  { value: 'UPI', label: 'UPI' },
                   { value: 'Cash', label: 'Cash' },
                   { value: 'Cheque', label: 'Cheque' },
                 ]}

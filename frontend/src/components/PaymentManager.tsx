@@ -291,6 +291,8 @@ export default function PaymentManager({ session }: PaymentManagerProps) {
     return matchesSearch && matchesMode;
   });
 
+  const selectedInv = customerInvoices.find(i => i.id === selectedInvoiceId);
+
   return (
     <div className="space-y-6">
       {/* Toast Notification */}
@@ -325,55 +327,55 @@ export default function PaymentManager({ session }: PaymentManagerProps) {
       </AnimatePresence>
 
       {/* KPI Cards */}
-      <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-        <div className="p-5 rounded-2xl bg-white border border-slate-200/80 shadow-card">
+      <div className="grid grid-cols-2 md:grid-cols-3 gap-3 sm:gap-4">
+        <div className="p-3.5 sm:p-5 rounded-2xl bg-white border border-slate-200/80 shadow-card">
           <div className="flex items-center justify-between">
-            <span className="text-xs font-medium text-slate-500 uppercase tracking-wider">
+            <span className="text-[10px] sm:text-xs font-medium text-slate-500 uppercase tracking-wider truncate">
               Total Inward Collections
             </span>
-            <div className="w-9 h-9 rounded-xl bg-emerald-50 flex items-center justify-center text-emerald-600">
+            <div className="w-8 h-8 sm:w-9 sm:h-9 rounded-xl bg-emerald-50 flex items-center justify-center text-emerald-600 shrink-0">
               <TrendingUp className="w-4 h-4" />
             </div>
           </div>
-          <div className="mt-3">
-            <span className="text-2xl font-semibold text-slate-900 tracking-tight">
+          <div className="mt-2 sm:mt-3">
+            <span className="text-lg sm:text-2xl font-semibold text-slate-900 tracking-tight">
               ₹{summary.totalCollected.toLocaleString('en-IN', { maximumFractionDigits: 0 })}
             </span>
-            <span className="text-xs text-slate-500 ml-2">all-time realized</span>
+            <span className="text-[10px] sm:text-xs text-slate-500 ml-1.5 sm:ml-2">all-time realized</span>
           </div>
         </div>
 
-        <div className="p-5 rounded-2xl bg-white border border-slate-200/80 shadow-card">
+        <div className="p-3.5 sm:p-5 rounded-2xl bg-white border border-slate-200/80 shadow-card">
           <div className="flex items-center justify-between">
-            <span className="text-xs font-medium text-slate-500 uppercase tracking-wider">
+            <span className="text-[10px] sm:text-xs font-medium text-slate-500 uppercase tracking-wider truncate">
               Collections (This Month)
             </span>
-            <div className="w-9 h-9 rounded-xl bg-slate-100 flex items-center justify-center text-slate-800">
+            <div className="w-8 h-8 sm:w-9 sm:h-9 rounded-xl bg-slate-100 flex items-center justify-center text-slate-800 shrink-0">
               <Receipt className="w-4 h-4" />
             </div>
           </div>
-          <div className="mt-3">
-            <span className="text-2xl font-semibold text-slate-900 tracking-tight">
+          <div className="mt-2 sm:mt-3">
+            <span className="text-lg sm:text-2xl font-semibold text-slate-900 tracking-tight">
               ₹{summary.thisMonthCollected.toLocaleString('en-IN', { maximumFractionDigits: 0 })}
             </span>
-            <span className="text-xs text-slate-500 ml-2">current cycle</span>
+            <span className="text-[10px] sm:text-xs text-slate-500 ml-1.5 sm:ml-2">current cycle</span>
           </div>
         </div>
 
-        <div className="p-5 rounded-2xl bg-white border border-slate-200/80 shadow-card">
+        <div className="col-span-2 md:col-span-1 p-3.5 sm:p-5 rounded-2xl bg-white border border-slate-200/80 shadow-card">
           <div className="flex items-center justify-between">
-            <span className="text-xs font-medium text-slate-500 uppercase tracking-wider">
+            <span className="text-[10px] sm:text-xs font-medium text-slate-500 uppercase tracking-wider truncate">
               Total Receipts Recorded
             </span>
-            <div className="w-9 h-9 rounded-xl bg-slate-100 flex items-center justify-center text-slate-800">
+            <div className="w-8 h-8 sm:w-9 sm:h-9 rounded-xl bg-slate-100 flex items-center justify-center text-slate-800 shrink-0">
               <FileCheck className="w-4 h-4" />
             </div>
           </div>
-          <div className="mt-3">
-            <span className="text-2xl font-semibold text-slate-900 tracking-tight">
+          <div className="mt-2 sm:mt-3">
+            <span className="text-lg sm:text-2xl font-semibold text-slate-900 tracking-tight">
               {summary.totalTransactions}
             </span>
-            <span className="text-xs text-slate-500 ml-2">transactions</span>
+            <span className="text-[10px] sm:text-xs text-slate-500 ml-1.5 sm:ml-2">transactions</span>
           </div>
         </div>
       </div>
@@ -381,12 +383,12 @@ export default function PaymentManager({ session }: PaymentManagerProps) {
       {/* Control Bar: Filters, Search, and Action Button */}
       <div className="flex flex-col md:flex-row items-stretch md:items-center justify-between gap-4">
         {/* Mode Filter Pills */}
-        <div className="flex items-center gap-1.5 p-1 rounded-2xl bg-slate-100 border border-slate-200/80 overflow-x-auto">
+        <div className="flex items-center gap-1.5 p-1 rounded-2xl bg-slate-100 border border-slate-200/80 overflow-x-auto max-w-full">
           {(['ALL', 'NEFT', 'UPI', 'CHEQUE', 'CASH'] as const).map(mode => (
             <button
               key={mode}
               onClick={() => setModeFilter(mode)}
-              className={`px-3.5 py-1.5 rounded-xl text-xs font-medium transition-all whitespace-nowrap ${
+              className={`px-3.5 py-1.5 rounded-xl text-xs font-medium transition-all whitespace-nowrap shrink-0 ${
                 modeFilter === mode
                   ? 'bg-white text-slate-900 shadow-sm'
                   : 'text-slate-600 hover:text-slate-900'
@@ -422,9 +424,9 @@ export default function PaymentManager({ session }: PaymentManagerProps) {
           {(session.role === 'ADMIN' || session.role === 'STAFF') && (
             <button
               onClick={handleOpenModal}
-              className="flex items-center gap-2 px-4 py-2 rounded-2xl bg-white border border-slate-300 text-slate-900 text-xs font-semibold hover:bg-slate-50 hover:border-slate-400 transition-all shadow-2xs whitespace-nowrap"
+              className="flex items-center gap-2 px-4 py-2 rounded-2xl bg-white border border-slate-300 text-slate-900 text-xs font-semibold hover:bg-slate-50 hover:border-slate-400 transition-all shadow-2xs whitespace-nowrap shrink-0"
             >
-              <Plus className="w-4 h-4" />
+              <Plus className="w-4 h-4 shrink-0" />
               <span>Record Customer Payment</span>
             </button>
           )}
@@ -432,30 +434,31 @@ export default function PaymentManager({ session }: PaymentManagerProps) {
       </div>
 
       {/* Payments Table */}
-      <div className="bg-white border border-slate-200/80 rounded-3xl shadow-card overflow-hidden">
-        <div className="overflow-x-auto">
-          <table className="w-full text-left text-xs text-slate-700">
+      <div className="bg-white border border-slate-200/80 rounded-2xl sm:rounded-3xl shadow-card overflow-hidden w-full max-w-full">
+        <div className="overflow-x-auto w-full max-w-full">
+          <table className="w-full min-w-[700px] text-left text-xs text-slate-700">
             <thead className="bg-slate-50/75 border-b border-slate-200/80 text-[11px] font-semibold text-slate-500 uppercase tracking-wider">
               <tr>
                 <th className="py-3.5 px-4 whitespace-nowrap text-left">Date</th>
                 <th className="py-3.5 px-4 whitespace-nowrap text-left">Customer Company</th>
                 <th className="py-3.5 px-4 whitespace-nowrap text-left">Linked Invoice</th>
                 <th className="py-3.5 px-4 whitespace-nowrap text-left">Payment Mode</th>
-                <th className="py-3.5 px-4 whitespace-nowrap text-left">UTR / Reference No</th>
+                <th className="py-3.5 px-4 whitespace-nowrap text-left">Reference Number</th>
                 <th className="py-3.5 px-4 text-left whitespace-nowrap">Amount (₹)</th>
+                <th className="py-3.5 px-4 text-left whitespace-nowrap">Remaining Balance (₹)</th>
                 <th className="py-3.5 px-4 text-left whitespace-nowrap">Actions</th>
               </tr>
             </thead>
             <tbody className="divide-y divide-slate-100">
               {loading ? (
                 <tr>
-                  <td colSpan={7} className="py-12 text-center text-slate-400 whitespace-nowrap">
+                  <td colSpan={8} className="py-12 text-center text-slate-400 whitespace-nowrap">
                     Loading payments ledger...
                   </td>
                 </tr>
               ) : filteredPayments.length === 0 ? (
                 <tr>
-                  <td colSpan={7} className="py-12 text-center text-slate-400 whitespace-nowrap">
+                  <td colSpan={8} className="py-12 text-center text-slate-400 whitespace-nowrap">
                     <CreditCard className="w-8 h-8 mx-auto mb-2 text-slate-300" />
                     No customer payments recorded yet. Click "+ Record Customer Payment" to log bank remittances.
                   </td>
@@ -500,6 +503,28 @@ export default function PaymentManager({ session }: PaymentManagerProps) {
                       +₹{parseFloat(pay.amount.toString()).toLocaleString('en-IN', { minimumFractionDigits: 2 })}
                     </td>
                     <td className="py-3 px-4 text-left whitespace-nowrap">
+                      {pay.invoice ? (
+                        <div>
+                          <span
+                            className={`font-semibold text-xs ${
+                              parseFloat(pay.invoice.balanceDue.toString()) <= 0
+                                ? 'text-emerald-700'
+                                : 'text-slate-900'
+                            }`}
+                          >
+                            ₹{parseFloat(pay.invoice.balanceDue.toString()).toLocaleString('en-IN', { minimumFractionDigits: 2 })}
+                          </span>
+                          {parseFloat(pay.invoice.balanceDue.toString()) <= 0 && (
+                            <span className="ml-2 inline-flex px-1.5 py-0.5 rounded text-[10px] font-semibold bg-emerald-50 text-emerald-700 border border-emerald-200">
+                              Paid
+                            </span>
+                          )}
+                        </div>
+                      ) : (
+                        <span className="text-slate-400 text-xs">—</span>
+                      )}
+                    </td>
+                    <td className="py-3 px-4 text-left whitespace-nowrap">
                       {session.role === 'ADMIN' ? (
                         <div className="flex items-center gap-1">
                           <button
@@ -533,7 +558,7 @@ export default function PaymentManager({ session }: PaymentManagerProps) {
       <SlideOverDrawer
         isOpen={modalOpen}
         onClose={() => setModalOpen(false)}
-        title={editingPaymentId ? "Edit Customer Payment" : "Record Customer Payment"}
+        title={editingPaymentId ? "Edit Customer Payment" : "Add Customer Payment"}
         subtitle="Log bank transfer, UPI, or cheque payment against invoices"
         footer={
           <>
@@ -583,20 +608,20 @@ export default function PaymentManager({ session }: PaymentManagerProps) {
           {selectedCompanyId && (
             <div>
               <label className="block text-[11px] font-semibold text-slate-700 mb-1.5 uppercase tracking-wider">
-                Link to Pending Invoice (Optional / On-Account)
+                Link to Invoice (Optional)
               </label>
               <CustomSelect
                 value={selectedInvoiceId}
                 onChange={(val) => handleInvoiceSelect(val)}
                 options={[
-                  { value: '', label: '-- General / On-Account Payment --' },
+                  { value: '', label: '-- General or Advance Payment --' },
                   ...customerInvoices.map((inv) => ({
                     value: inv.id,
                     label: `${inv.invoiceNumber} (Total: ₹${parseFloat(inv.totalAmount.toString()).toLocaleString('en-IN')})`,
                     sublabel: `Balance Due: ₹${parseFloat(inv.balanceDue.toString()).toLocaleString('en-IN')}`,
                   })),
                 ]}
-                placeholder="-- General / On-Account Payment --"
+                placeholder="-- General or Advance Payment --"
               />
             </div>
           )}
@@ -630,6 +655,47 @@ export default function PaymentManager({ session }: PaymentManagerProps) {
             </div>
           </div>
 
+          {/* Real-time Invoice Balance Card */}
+          {selectedInv && (
+            <div className="p-3.5 rounded-2xl bg-slate-50 border border-slate-200/80 space-y-2 text-xs">
+              <div className="flex items-center justify-between">
+                <span className="text-slate-500">Invoice Total:</span>
+                <span className="font-semibold text-slate-900">
+                  ₹{parseFloat(selectedInv.totalAmount.toString()).toLocaleString('en-IN', { minimumFractionDigits: 2 })}
+                </span>
+              </div>
+              <div className="flex items-center justify-between">
+                <span className="text-slate-500">Already Paid:</span>
+                <span className="font-medium text-emerald-700">
+                  ₹{parseFloat(selectedInv.paidAmount.toString()).toLocaleString('en-IN', { minimumFractionDigits: 2 })}
+                </span>
+              </div>
+              <div className="flex items-center justify-between border-t border-slate-200 pt-1.5">
+                <span className="text-slate-700 font-medium">Current Balance Due:</span>
+                <span className="font-bold text-slate-900">
+                  ₹{parseFloat(selectedInv.balanceDue.toString()).toLocaleString('en-IN', { minimumFractionDigits: 2 })}
+                </span>
+              </div>
+              {typeof amount === 'number' && amount > 0 && (
+                <div className="flex items-center justify-between border-t border-dashed border-slate-200 pt-1.5">
+                  <span className="text-slate-700 font-medium">Remaining After This Payment:</span>
+                  <span
+                    className={`font-bold ${
+                      Math.max(0, parseFloat(selectedInv.balanceDue.toString()) - amount) <= 0
+                        ? 'text-emerald-700'
+                        : 'text-amber-700'
+                    }`}
+                  >
+                    ₹{Math.max(0, parseFloat(selectedInv.balanceDue.toString()) - amount).toLocaleString('en-IN', {
+                      minimumFractionDigits: 2,
+                    })}
+                    {parseFloat(selectedInv.balanceDue.toString()) - amount <= 0 && ' (Fully Settled)'}
+                  </span>
+                </div>
+              )}
+            </div>
+          )}
+
           {/* Payment Mode & Reference */}
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
             <div>
@@ -640,8 +706,8 @@ export default function PaymentManager({ session }: PaymentManagerProps) {
                 value={paymentMode}
                 onChange={(val) => setPaymentMode(val)}
                 options={[
-                  { value: 'NEFT/RTGS', label: 'NEFT / RTGS' },
-                  { value: 'UPI', label: 'UPI / Google Pay' },
+                  { value: 'NEFT/RTGS', label: 'NEFT or RTGS' },
+                  { value: 'UPI', label: 'UPI' },
                   { value: 'Cheque', label: 'Cheque' },
                   { value: 'Cash', label: 'Cash' },
                   { value: 'IMPS', label: 'IMPS' },
@@ -652,7 +718,7 @@ export default function PaymentManager({ session }: PaymentManagerProps) {
 
             <div>
               <label className="block text-[11px] font-semibold text-slate-700 mb-1.5 uppercase tracking-wider">
-                UTR / Cheque / Ref No
+                Reference Number
               </label>
               <input
                 type="text"
@@ -665,13 +731,13 @@ export default function PaymentManager({ session }: PaymentManagerProps) {
 
           <div>
             <label className="block text-[11px] font-semibold text-slate-700 mb-1.5 uppercase tracking-wider">
-              Remarks / Bank Notes
+              Remarks
             </label>
             <input
               type="text"
               value={remarks}
               onChange={(e) => setRemarks(e.target.value)}
-              className="w-full px-3.5 py-2.5 rounded-xl bg-white border border-slate-200 text-xs text-slate-900 focus:border-slate-300 outline-none"
+              className="w-full px-3.5 py-2.5 rounded-xl border border-slate-200 text-xs text-slate-900 focus:border-slate-300 outline-none"
             />
           </div>
         </form>

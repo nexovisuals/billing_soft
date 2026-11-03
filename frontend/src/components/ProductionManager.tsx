@@ -79,6 +79,7 @@ export default function ProductionManager({ session, defaultSubTab = 'queue' }: 
   useEffect(() => {
     if (defaultSubTab) {
       setActiveTab(defaultSubTab);
+      setSearchTerm('');
     }
   }, [defaultSubTab]);
   const [entries, setEntries] = useState<DailyWorkItem[]>([]);
@@ -454,6 +455,23 @@ export default function ProductionManager({ session, defaultSubTab = 'queue' }: 
     return matchesSearch && matchesStatus;
   });
 
+  // Filter workers
+  const filteredWorkers = workers.filter(w => {
+    const term = searchTerm.toLowerCase();
+    return (
+      w.user.fullName.toLowerCase().includes(term) ||
+      w.employeeId.toLowerCase().includes(term) ||
+      w.user.username.toLowerCase().includes(term) ||
+      (w.phoneNumber && w.phoneNumber.toLowerCase().includes(term))
+    );
+  });
+
+  const totalPayroll = workers.reduce(
+    (acc, w) => acc + (parseFloat(w.monthlySalary?.toString() || '0') || 0),
+    0
+  );
+  const activeWorkersCount = workers.filter(w => w.user.isActive).length;
+
   return (
     <div className="space-y-6">
       {/* Toast Notification */}
@@ -487,192 +505,233 @@ export default function ProductionManager({ session, defaultSubTab = 'queue' }: 
         )}
       </AnimatePresence>
 
-      {/* KPI Cards */}
-      <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
-        <div className="p-5 rounded-2xl bg-white border border-slate-200/80 shadow-card">
-          <div className="flex items-center justify-between">
-            <span className="text-xs font-medium text-slate-500 uppercase tracking-wider">
-              Approved Output
-            </span>
-            <div className="w-9 h-9 rounded-xl bg-emerald-50 flex items-center justify-center text-emerald-600">
-              <CheckCircle2 className="w-4 h-4" />
-            </div>
-          </div>
-          <div className="mt-3">
-            <span className="text-2xl font-semibold text-slate-900 tracking-tight">
-              {summary.totalFinishedPieces.toLocaleString('en-IN')}
-            </span>
-            <span className="text-xs text-slate-500 ml-2">pieces finished</span>
-          </div>
-        </div>
-
-        <div className="p-5 rounded-2xl bg-white border border-slate-200/80 shadow-card">
-          <div className="flex items-center justify-between">
-            <span className="text-xs font-medium text-slate-500 uppercase tracking-wider">
-              Pending Approvals
-            </span>
-            <div className="w-9 h-9 rounded-xl bg-amber-50 flex items-center justify-center text-amber-600">
-              <Clock className="w-4 h-4" />
-            </div>
-          </div>
-          <div className="mt-3">
-            <span className="text-2xl font-semibold text-slate-900 tracking-tight">
-              {summary.pendingApprovals}
-            </span>
-            <span className="text-xs text-amber-700 font-medium ml-2">awaiting review</span>
-          </div>
-        </div>
-
-        <div className="p-5 rounded-2xl bg-white border border-slate-200/80 shadow-card">
-          <div className="flex items-center justify-between">
-            <span className="text-xs font-medium text-slate-500 uppercase tracking-wider">
-              Defect / Scrap Rate
-            </span>
-            <div className="w-9 h-9 rounded-xl bg-slate-100 flex items-center justify-center text-slate-800">
-              <AlertCircle className="w-4 h-4" />
-            </div>
-          </div>
-          <div className="mt-3">
-            <span className="text-2xl font-semibold text-slate-900 tracking-tight">
-              {summary.scrapRatePercent}%
-            </span>
-            <span className="text-xs text-slate-500 ml-2">
-              ({summary.totalScrapPieces} pcs rejected)
-            </span>
-          </div>
-        </div>
-
-        <div className="p-5 rounded-2xl bg-white border border-slate-200/80 shadow-card">
-          <div className="flex items-center justify-between">
-            <span className="text-xs font-medium text-slate-500 uppercase tracking-wider">
-              Machine Operators
-            </span>
-            <div className="w-9 h-9 rounded-xl bg-slate-100 flex items-center justify-center text-slate-800">
-              <Users className="w-4 h-4" />
-            </div>
-          </div>
-          <div className="mt-3">
-            <span className="text-2xl font-semibold text-slate-900 tracking-tight">
-              {workers.length}
-            </span>
-            <span className="text-xs text-slate-500 ml-2">active workers</span>
-          </div>
-        </div>
-      </div>
-
-      {/* Sub-Tabs Switcher & Control Bar */}
-      <div className="flex flex-col md:flex-row items-stretch md:items-center justify-between gap-4">
-        {/* Module Switcher Tabs */}
-        <div className="flex items-center gap-2 p-1 rounded-2xl bg-slate-100 border border-slate-200/80">
-          <button
-            onClick={() => setActiveTab('queue')}
-            className={`flex items-center gap-2 px-4 py-2 rounded-xl text-xs font-medium transition-all ${
-              activeTab === 'queue'
-                ? 'bg-white text-slate-950 shadow-sm'
-                : 'text-slate-600 hover:text-slate-950'
-            } whitespace-nowrap`}
-          >
-            <Clock className="w-3.5 h-3.5" />
-            <span>Daily Production Queue</span>
-            {summary.pendingApprovals > 0 && (
-              <span className="px-1.5 py-0.5 rounded-full bg-amber-100 text-amber-800 text-[10px] font-semibold">
-                {summary.pendingApprovals}
-              </span>
-            )}
-          </button>
-          <button
-            onClick={() => setActiveTab('workers')}
-            className={`flex items-center gap-2 px-4 py-2 rounded-xl text-xs font-medium transition-all ${
-              activeTab === 'workers'
-                ? 'bg-white text-slate-950 shadow-sm'
-                : 'text-slate-600 hover:text-slate-950'
-            } whitespace-nowrap`}
-          >
-            <Users className="w-3.5 h-3.5" />
-            <span>Worker Roster</span>
-          </button>
-        </div>
-
-        {/* Right Action Bar */}
-        <div className="flex flex-wrap items-center gap-3">
-          {(session.role === 'ADMIN' || session.role === 'STAFF') && (
-            <button
-              onClick={openCreateManualWork}
-              className="flex items-center gap-2 px-4 py-2 rounded-2xl bg-white border border-slate-300 text-slate-900 text-xs font-semibold hover:bg-slate-50 hover:border-slate-400 active:scale-95 transition-all shadow-2xs whitespace-nowrap"
-            >
-              <Plus className="w-4 h-4" />
-              <span>Log Manual Work</span>
-            </button>
-          )}
-
-          {activeTab === 'queue' ? (
-            <>
-              {/* Status Filter Ribbon (Ordered: All, Approved, Pending, Rejected) */}
-              <div className="flex items-center gap-1 p-1 rounded-xl bg-slate-100 border border-slate-200">
-                {(['ALL', 'APPROVED', 'PENDING', 'REJECTED'] as const).map(st => (
-                  <button
-                    key={st}
-                    onClick={() => setStatusFilter(st)}
-                    className={`px-3 py-1 rounded-lg text-xs font-medium transition-colors ${
-                      statusFilter === st
-                        ? 'bg-white text-slate-900 shadow-sm'
-                        : 'text-slate-600 hover:text-slate-900'
-                    } whitespace-nowrap`}
-                  >
-                    {st === 'ALL' ? 'All' : st === 'APPROVED' ? 'Approved' : st === 'PENDING' ? 'Pending' : 'Rejected'}
-                  </button>
-                ))}
+      {/* KPI Cards & Action Bars - Distinct per View */}
+      {activeTab === 'workers' ? (
+        <>
+          {/* Workers KPI Cards */}
+          <div className="grid grid-cols-2 md:grid-cols-3 gap-3 sm:gap-4">
+            <div className="p-3.5 sm:p-5 rounded-2xl bg-white border border-slate-200/80 shadow-card">
+              <div className="flex items-center justify-between">
+                <span className="text-[10px] sm:text-xs font-medium text-slate-500 uppercase tracking-wider truncate">
+                  Total Workers
+                </span>
+                <div className="w-8 h-8 sm:w-9 sm:h-9 rounded-xl bg-slate-100 flex items-center justify-center text-slate-800 shrink-0">
+                  <Users className="w-4 h-4" />
+                </div>
               </div>
+              <div className="mt-2 sm:mt-3">
+                <span className="text-lg sm:text-2xl font-semibold text-slate-900 tracking-tight">
+                  {workers.length}
+                </span>
+                <span className="text-[10px] sm:text-xs text-slate-500 ml-1.5 sm:ml-2">registered</span>
+              </div>
+            </div>
 
-              {/* Search Input */}
+            <div className="p-3.5 sm:p-5 rounded-2xl bg-white border border-slate-200/80 shadow-card">
+              <div className="flex items-center justify-between">
+                <span className="text-[10px] sm:text-xs font-medium text-slate-500 uppercase tracking-wider truncate">
+                  Active Workers
+                </span>
+                <div className="w-8 h-8 sm:w-9 sm:h-9 rounded-xl bg-emerald-50 flex items-center justify-center text-emerald-600 shrink-0">
+                  <CheckCircle2 className="w-4 h-4" />
+                </div>
+              </div>
+              <div className="mt-2 sm:mt-3">
+                <span className="text-lg sm:text-2xl font-semibold text-slate-900 tracking-tight">
+                  {activeWorkersCount}
+                </span>
+                <span className="text-[10px] sm:text-xs text-emerald-700 font-medium ml-1.5 sm:ml-2">active</span>
+              </div>
+            </div>
+
+            <div className="col-span-2 md:col-span-1 p-3.5 sm:p-5 rounded-2xl bg-white border border-slate-200/80 shadow-card">
+              <div className="flex items-center justify-between">
+                <span className="text-[10px] sm:text-xs font-medium text-slate-500 uppercase tracking-wider truncate">
+                  Monthly Payroll
+                </span>
+                <div className="w-8 h-8 sm:w-9 sm:h-9 rounded-xl bg-blue-50 flex items-center justify-center text-blue-600 shrink-0">
+                  <IndianRupee className="w-4 h-4" />
+                </div>
+              </div>
+              <div className="mt-2 sm:mt-3">
+                <span className="text-lg sm:text-2xl font-semibold text-slate-900 tracking-tight">
+                  ₹{totalPayroll.toLocaleString('en-IN', { minimumFractionDigits: 2 })}
+                </span>
+                <span className="text-[10px] sm:text-xs text-slate-500 ml-1.5 sm:ml-2">base salary</span>
+              </div>
+            </div>
+          </div>
+
+          {/* Workers Action Bar */}
+          <div className="flex flex-col md:flex-row items-stretch md:items-center justify-between gap-4">
+            <div className="relative flex-1 max-w-md">
+              <Search className="w-4 h-4 text-slate-400 absolute left-3.5 top-1/2 -translate-y-1/2" />
+              <input
+                type="text"
+                placeholder="Search worker by name, ID, phone..."
+                value={searchTerm}
+                onChange={e => setSearchTerm(e.target.value)}
+                className="w-full pl-9 pr-4 py-2 rounded-2xl bg-white border border-slate-200 text-xs text-slate-900 placeholder:text-slate-400 focus:outline-none focus:border-slate-300 shadow-sm"
+              />
+            </div>
+
+            <div className="flex items-center gap-3">
+              <button
+                onClick={() => {
+                  setEditingWorkerId(null);
+                  setNewWorkerName('');
+                  setNewWorkerEmpId('');
+                  setNewWorkerUsername('');
+                  setNewWorkerPassword('');
+                  setNewWorkerPhone('');
+                  setNewWorkerSalary('');
+                  setFormError(null);
+                  setNewWorkerModal(true);
+                }}
+                className="flex items-center gap-2 px-4 py-2 rounded-2xl bg-white border border-slate-300 text-slate-900 text-xs font-semibold hover:bg-slate-50 hover:border-slate-400 transition-all shadow-2xs whitespace-nowrap shrink-0"
+              >
+                <Plus className="w-4 h-4 shrink-0" />
+                <span>Register Worker</span>
+              </button>
+            </div>
+          </div>
+        </>
+      ) : (
+        <>
+          {/* Daily Work KPI Cards */}
+          <div className="grid grid-cols-2 lg:grid-cols-4 gap-3 sm:gap-4">
+            <div className="p-3.5 sm:p-5 rounded-2xl bg-white border border-slate-200/80 shadow-card">
+              <div className="flex items-center justify-between">
+                <span className="text-[10px] sm:text-xs font-medium text-slate-500 uppercase tracking-wider truncate">
+                  Approved Output
+                </span>
+                <div className="w-8 h-8 sm:w-9 sm:h-9 rounded-xl bg-emerald-50 flex items-center justify-center text-emerald-600 shrink-0">
+                  <CheckCircle2 className="w-4 h-4" />
+                </div>
+              </div>
+              <div className="mt-2 sm:mt-3">
+                <span className="text-lg sm:text-2xl font-semibold text-slate-900 tracking-tight">
+                  {summary.totalFinishedPieces.toLocaleString('en-IN')}
+                </span>
+                <span className="text-[10px] sm:text-xs text-slate-500 ml-1.5 sm:ml-2">pieces finished</span>
+              </div>
+            </div>
+
+            <div className="p-3.5 sm:p-5 rounded-2xl bg-white border border-slate-200/80 shadow-card">
+              <div className="flex items-center justify-between">
+                <span className="text-[10px] sm:text-xs font-medium text-slate-500 uppercase tracking-wider truncate">
+                  Pending Approvals
+                </span>
+                <div className="w-8 h-8 sm:w-9 sm:h-9 rounded-xl bg-amber-50 flex items-center justify-center text-amber-600 shrink-0">
+                  <Clock className="w-4 h-4" />
+                </div>
+              </div>
+              <div className="mt-2 sm:mt-3">
+                <span className="text-lg sm:text-2xl font-semibold text-slate-900 tracking-tight">
+                  {summary.pendingApprovals}
+                </span>
+                <span className="text-[10px] sm:text-xs text-amber-700 font-medium ml-1.5 sm:ml-2">awaiting review</span>
+              </div>
+            </div>
+
+            <div className="p-3.5 sm:p-5 rounded-2xl bg-white border border-slate-200/80 shadow-card">
+              <div className="flex items-center justify-between">
+                <span className="text-[10px] sm:text-xs font-medium text-slate-500 uppercase tracking-wider truncate">
+                  Scrap Rate
+                </span>
+                <div className="w-8 h-8 sm:w-9 sm:h-9 rounded-xl bg-slate-100 flex items-center justify-center text-slate-800 shrink-0">
+                  <AlertCircle className="w-4 h-4" />
+                </div>
+              </div>
+              <div className="mt-2 sm:mt-3">
+                <span className="text-lg sm:text-2xl font-semibold text-slate-900 tracking-tight">
+                  {summary.scrapRatePercent}%
+                </span>
+                <span className="text-[10px] sm:text-xs text-slate-500 ml-1.5 sm:ml-2">
+                  ({summary.totalScrapPieces} pcs)
+                </span>
+              </div>
+            </div>
+
+            <div className="p-3.5 sm:p-5 rounded-2xl bg-white border border-slate-200/80 shadow-card">
+              <div className="flex items-center justify-between">
+                <span className="text-[10px] sm:text-xs font-medium text-slate-500 uppercase tracking-wider truncate">
+                  Daily Work Entries
+                </span>
+                <div className="w-8 h-8 sm:w-9 sm:h-9 rounded-xl bg-slate-100 flex items-center justify-center text-slate-800 shrink-0">
+                  <Clock className="w-4 h-4" />
+                </div>
+              </div>
+              <div className="mt-2 sm:mt-3">
+                <span className="text-lg sm:text-2xl font-semibold text-slate-900 tracking-tight">
+                  {entries.length}
+                </span>
+                <span className="text-[10px] sm:text-xs text-slate-500 ml-1.5 sm:ml-2">total entries</span>
+              </div>
+            </div>
+          </div>
+
+          {/* Daily Work Action Bar */}
+          <div className="flex flex-col md:flex-row items-stretch md:items-center justify-between gap-4">
+            {/* Status Filter Ribbon (Ordered: All, Approved, Pending, Rejected) */}
+            <div className="flex items-center gap-1 p-1 rounded-xl bg-slate-100 border border-slate-200 overflow-x-auto max-w-full">
+              {(['ALL', 'APPROVED', 'PENDING', 'REJECTED'] as const).map(st => (
+                <button
+                  key={st}
+                  onClick={() => setStatusFilter(st)}
+                  className={`px-3 py-1 rounded-lg text-xs font-medium transition-colors ${
+                    statusFilter === st
+                      ? 'bg-white text-slate-900 shadow-sm'
+                      : 'text-slate-600 hover:text-slate-900'
+                  } whitespace-nowrap shrink-0`}
+                >
+                  {st === 'ALL' ? 'All' : st === 'APPROVED' ? 'Approved' : st === 'PENDING' ? 'Pending' : 'Rejected'}
+                </button>
+              ))}
+            </div>
+
+            {/* Right Controls */}
+            <div className="flex flex-wrap items-center gap-3">
               <div className="relative md:w-56">
                 <Search className="w-4 h-4 text-slate-400 absolute left-3.5 top-1/2 -translate-y-1/2" />
                 <input
                   type="text"
-                  placeholder="Search operator, company, part..."
+                  placeholder="Search worker, company, part..."
                   value={searchTerm}
                   onChange={e => setSearchTerm(e.target.value)}
                   className="w-full pl-9 pr-4 py-2 rounded-2xl bg-white border border-slate-200 text-xs text-slate-900 placeholder:text-slate-400 focus:outline-none focus:border-slate-300 shadow-sm"
                 />
               </div>
-            </>
-          ) : activeTab === 'workers' ? (
-            <button
-              onClick={() => {
-                setEditingWorkerId(null);
-                setNewWorkerName('');
-                setNewWorkerEmpId('');
-                setNewWorkerUsername('');
-                setNewWorkerPassword('');
-                setNewWorkerPhone('');
-                setNewWorkerSalary('');
-                setFormError(null);
-                setNewWorkerModal(true);
-              }}
-              className="flex items-center gap-2 px-4 py-2 rounded-2xl bg-white border border-slate-300 text-slate-900 text-xs font-semibold hover:bg-slate-50 hover:border-slate-400 transition-all shadow-2xs whitespace-nowrap"
-            >
-              <Plus className="w-4 h-4" />
-              <span>Register New Operator</span>
-            </button>
-          ) : null}
-        </div>
-      </div>
 
-      {/* Sub-View 1: Production Approval Queue Table */}
+              {(session.role === 'ADMIN' || session.role === 'STAFF') && (
+                <button
+                  onClick={openCreateManualWork}
+                  className="flex items-center gap-2 px-4 py-2 rounded-2xl bg-white border border-slate-300 text-slate-900 text-xs font-semibold hover:bg-slate-50 hover:border-slate-400 active:scale-95 transition-all shadow-2xs whitespace-nowrap shrink-0"
+                >
+                  <Plus className="w-4 h-4 shrink-0" />
+                  <span>Add Daily Work</span>
+                </button>
+              )}
+            </div>
+          </div>
+        </>
+      )}
+
+      {/* View 1: Production Approval Queue Table */}
       {activeTab === 'queue' ? (
-        <div className="bg-white border border-slate-200/80 rounded-3xl shadow-card overflow-hidden">
-          <div className="overflow-x-auto">
-            <table className="w-full text-left text-xs text-slate-700">
+        <div className="bg-white border border-slate-200/80 rounded-2xl sm:rounded-3xl shadow-card overflow-hidden w-full max-w-full">
+          <div className="overflow-x-auto w-full max-w-full">
+            <table className="w-full min-w-[700px] text-left text-xs text-slate-700">
               <thead className="bg-slate-50/75 border-b border-slate-200/80 text-[11px] font-semibold text-slate-500 uppercase tracking-wider">
                 <tr>
                   <th className="py-3.5 px-4 whitespace-nowrap text-left">Date</th>
-                  <th className="py-3.5 px-4 whitespace-nowrap text-left">Machine Operator</th>
-                  <th className="py-3.5 px-4 whitespace-nowrap text-left">Customer Company</th>
-                  <th className="py-3.5 px-4 whitespace-nowrap text-left">Part & Operation</th>
+                  <th className="py-3.5 px-4 whitespace-nowrap text-left">Worker</th>
+                  <th className="py-3.5 px-4 whitespace-nowrap text-left">Company</th>
+                  <th className="py-3.5 px-4 whitespace-nowrap text-left">Part Description</th>
                   <th className="py-3.5 px-4 text-left whitespace-nowrap">Finished Qty</th>
                   <th className="py-3.5 px-4 text-left whitespace-nowrap">Scrap Qty</th>
                   <th className="py-3.5 px-4 text-left whitespace-nowrap">Status</th>
-                  <th className="py-3.5 px-4 text-left whitespace-nowrap">Admin Action</th>
+                  <th className="py-3.5 px-4 text-left whitespace-nowrap">Actions</th>
                 </tr>
               </thead>
               <tbody className="divide-y divide-slate-100">
@@ -800,73 +859,84 @@ export default function ProductionManager({ session, defaultSubTab = 'queue' }: 
         </div>
       ) : activeTab === 'workers' ? (
         /* Sub-View 2: Worker Roster Table */
-        <div className="bg-white border border-slate-200/80 rounded-3xl shadow-card overflow-hidden">
-          <div className="overflow-x-auto">
-            <table className="w-full text-left text-xs text-slate-700">
+        <div className="bg-white border border-slate-200/80 rounded-2xl sm:rounded-3xl shadow-card overflow-hidden w-full max-w-full">
+          <div className="overflow-x-auto w-full max-w-full">
+            <table className="w-full min-w-[700px] text-left text-xs text-slate-700">
               <thead className="bg-slate-50/75 border-b border-slate-200/80 text-[11px] font-semibold text-slate-500 uppercase tracking-wider">
                 <tr>
                   <th className="py-3.5 px-4 whitespace-nowrap text-left">Employee ID</th>
-                  <th className="py-3.5 px-4 whitespace-nowrap text-left">Operator Full Name</th>
-                  <th className="py-3.5 px-4 whitespace-nowrap text-left">Portal Username</th>
-                  <th className="py-3.5 px-4 whitespace-nowrap text-left">Contact Phone</th>
-                  <th className="py-3.5 px-4 text-left whitespace-nowrap">Monthly Base Salary</th>
+                  <th className="py-3.5 px-4 whitespace-nowrap text-left">Worker Name</th>
+                  <th className="py-3.5 px-4 whitespace-nowrap text-left">Username</th>
+                  <th className="py-3.5 px-4 whitespace-nowrap text-left">Phone Number</th>
+                  <th className="py-3.5 px-4 text-left whitespace-nowrap">Monthly Salary</th>
                   <th className="py-3.5 px-4 text-left whitespace-nowrap">Daily Work Submissions</th>
                   <th className="py-3.5 px-4 text-left whitespace-nowrap">Status</th>
                   <th className="py-3.5 px-4 text-left whitespace-nowrap">Actions</th>
                 </tr>
               </thead>
               <tbody className="divide-y divide-slate-100">
-                {workers.map(w => (
-                  <tr key={w.id} className="hover:bg-slate-50/60 transition-colors">
-                    <td className="py-3 px-4 font-mono font-semibold text-slate-900 whitespace-nowrap">
-                      {w.employeeId}
-                    </td>
-                    <td className="py-3 px-4 font-medium text-slate-900 whitespace-nowrap">
-                      {w.user.fullName}
-                    </td>
-                    <td className="py-3 px-4 font-mono text-slate-600 whitespace-nowrap">
-                      @{w.user.username}
-                    </td>
-                    <td className="py-3 px-4 text-slate-600 whitespace-nowrap">
-                      {w.phoneNumber || '—'}
-                    </td>
-                    <td className="py-3 px-4 text-left font-semibold text-slate-900 whitespace-nowrap">
-                      ₹{parseFloat(w.monthlySalary.toString()).toLocaleString('en-IN', { minimumFractionDigits: 2 })}
-                    </td>
-                    <td className="py-3 px-4 text-left whitespace-nowrap">
-                      <span className="inline-flex px-2 py-0.5 rounded-full text-[10px] font-medium bg-slate-100 text-slate-700">
-                        {w._count?.dailyWork || 0} entries
-                      </span>
-                    </td>
-                    <td className="py-3 px-4 text-left whitespace-nowrap">
-                      <span className="inline-flex px-2 py-0.5 rounded-full text-[10px] font-medium bg-emerald-50 text-emerald-700 border border-emerald-200">
-                        Active
-                      </span>
-                    </td>
-                    <td className="py-3 px-4 text-left whitespace-nowrap">
-                      {session.role === 'ADMIN' ? (
-                        <div className="flex items-center gap-1">
-                          <button
-                            onClick={() => openEditWorker(w)}
-                            className="p-1 rounded-lg text-slate-400 hover:text-slate-900 hover:bg-slate-100 transition-colors whitespace-nowrap"
-                            title="Edit Operator Profile"
-                          >
-                            <Edit2 className="w-3.5 h-3.5" />
-                          </button>
-                          <button
-                            onClick={() => handleDeleteWorker(w.id)}
-                            className="p-1 rounded-lg text-slate-400 hover:text-rose-600 hover:bg-rose-50 transition-colors whitespace-nowrap"
-                            title="Delete Operator"
-                          >
-                            <Trash2 className="w-3.5 h-3.5" />
-                          </button>
-                        </div>
-                      ) : (
-                        <span className="text-slate-400 text-xs italic">View Only</span>
-                      )}
+                {filteredWorkers.length === 0 ? (
+                  <tr>
+                    <td colSpan={8} className="py-12 text-center text-slate-400 whitespace-nowrap">
+                      <Users className="w-8 h-8 mx-auto mb-2 text-slate-300" />
+                      {workers.length === 0
+                        ? 'No workers registered yet. Click "+ Register Worker" to add one.'
+                        : 'No workers match your search.'}
                     </td>
                   </tr>
-                ))}
+                ) : (
+                  filteredWorkers.map(w => (
+                    <tr key={w.id} className="hover:bg-slate-50/60 transition-colors">
+                      <td className="py-3 px-4 font-mono font-semibold text-slate-900 whitespace-nowrap">
+                        {w.employeeId}
+                      </td>
+                      <td className="py-3 px-4 font-medium text-slate-900 whitespace-nowrap">
+                        {w.user.fullName}
+                      </td>
+                      <td className="py-3 px-4 font-mono text-slate-600 whitespace-nowrap">
+                        @{w.user.username}
+                      </td>
+                      <td className="py-3 px-4 text-slate-600 whitespace-nowrap">
+                        {w.phoneNumber || '—'}
+                      </td>
+                      <td className="py-3 px-4 text-left font-semibold text-slate-900 whitespace-nowrap">
+                        ₹{parseFloat(w.monthlySalary.toString()).toLocaleString('en-IN', { minimumFractionDigits: 2 })}
+                      </td>
+                      <td className="py-3 px-4 text-left whitespace-nowrap">
+                        <span className="inline-flex px-2 py-0.5 rounded-full text-[10px] font-medium bg-slate-100 text-slate-700">
+                          {w._count?.dailyWork || 0} entries
+                        </span>
+                      </td>
+                      <td className="py-3 px-4 text-left whitespace-nowrap">
+                        <span className="inline-flex px-2 py-0.5 rounded-full text-[10px] font-medium bg-emerald-50 text-emerald-700 border border-emerald-200">
+                          Active
+                        </span>
+                      </td>
+                      <td className="py-3 px-4 text-left whitespace-nowrap">
+                        {session.role === 'ADMIN' ? (
+                          <div className="flex items-center gap-1">
+                            <button
+                              onClick={() => openEditWorker(w)}
+                              className="p-1 rounded-lg text-slate-400 hover:text-slate-900 hover:bg-slate-100 transition-colors whitespace-nowrap"
+                              title="Edit Worker Profile"
+                            >
+                              <Edit2 className="w-3.5 h-3.5" />
+                            </button>
+                            <button
+                              onClick={() => handleDeleteWorker(w.id)}
+                              className="p-1 rounded-lg text-slate-400 hover:text-rose-600 hover:bg-rose-50 transition-colors whitespace-nowrap"
+                              title="Delete Worker"
+                            >
+                              <Trash2 className="w-3.5 h-3.5" />
+                            </button>
+                          </div>
+                        ) : (
+                          <span className="text-slate-400 text-xs italic">View Only</span>
+                        )}
+                      </td>
+                    </tr>
+                  ))
+                )}
               </tbody>
             </table>
           </div>
@@ -942,26 +1012,26 @@ export default function ProductionManager({ session, defaultSubTab = 'queue' }: 
 
           <div>
             <label className="block text-[11px] font-semibold text-slate-700 mb-1.5 uppercase tracking-wider">
-              Component / Part (Optional Link)
+              Product (Optional)
             </label>
             <CustomSelect
               value={manMaterialId}
               onChange={(val) => setManMaterialId(val)}
               options={[
-                { value: '', label: '-- Select Component / Part (Optional) --' },
+                { value: '', label: '-- Select Product (Optional) --' },
                 ...materials.map((m) => ({
                   value: m.id,
                   label: m.productName,
                   sublabel: m.partNumber ? `Part: ${m.partNumber}` : undefined,
                 })),
               ]}
-              placeholder="-- Select Component / Part (Optional) --"
+              placeholder="-- Select Product (Optional) --"
             />
           </div>
 
           <div>
             <label className="block text-[11px] font-semibold text-slate-700 mb-1.5 uppercase tracking-wider">
-              Operation & Work Description
+              Work Description
             </label>
             <input
               type="text"
@@ -989,7 +1059,7 @@ export default function ProductionManager({ session, defaultSubTab = 'queue' }: 
 
             <div>
               <label className="block text-[11px] font-semibold text-slate-700 mb-1.5 uppercase tracking-wider">
-                Scrap / Rejected
+                Scrap Quantity
               </label>
               <input
                 type="number"
@@ -1018,7 +1088,7 @@ export default function ProductionManager({ session, defaultSubTab = 'queue' }: 
 
           <div>
             <label className="block text-[11px] font-semibold text-slate-700 mb-1.5 uppercase tracking-wider">
-              Remarks / Machine Notes
+              Remarks
             </label>
             <input
               type="text"
@@ -1083,8 +1153,8 @@ export default function ProductionManager({ session, defaultSubTab = 'queue' }: 
       <SlideOverDrawer
         isOpen={newWorkerModal}
         onClose={() => setNewWorkerModal(false)}
-        title={editingWorkerId ? "Edit Operator Profile" : "Register New Machine Operator"}
-        subtitle="Manage worker profile with mobile portal login credentials"
+        title={editingWorkerId ? "Edit Worker Profile" : "Register Worker"}
+        subtitle="Manage worker profile with login credentials"
         footer={
           <>
             <button
@@ -1100,7 +1170,7 @@ export default function ProductionManager({ session, defaultSubTab = 'queue' }: 
               disabled={loading}
               className="px-5 py-2.5 rounded-xl bg-white border border-slate-300 text-slate-900 text-xs font-semibold hover:bg-slate-50 hover:border-slate-400 disabled:opacity-50 active:scale-95 transition-all shadow-2xs whitespace-nowrap"
             >
-              {loading ? 'Saving...' : editingWorkerId ? 'Update Operator' : 'Register Operator'}
+              {loading ? 'Saving...' : editingWorkerId ? 'Update Worker' : 'Register Worker'}
             </button>
           </>
         }
@@ -1144,7 +1214,7 @@ export default function ProductionManager({ session, defaultSubTab = 'queue' }: 
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
             <div>
               <label className="block text-[11px] font-semibold text-slate-700 mb-1.5 uppercase tracking-wider">
-                Portal Username *
+                Username *
               </label>
               <input
                 type="text"
@@ -1189,7 +1259,7 @@ export default function ProductionManager({ session, defaultSubTab = 'queue' }: 
             <div>
               <label className="block text-[11px] font-semibold text-slate-700 mb-1.5 uppercase tracking-wider flex items-center gap-1">
                 <IndianRupee className="w-3 h-3 text-slate-500" />
-                <span>Monthly Base Salary (₹) *</span>
+                <span>Monthly Salary (₹) *</span>
               </label>
               <input
                 type="number"

@@ -177,7 +177,7 @@ export default function SettingsManager({ }: SettingsManagerProps) {
             </div>
 
             <div className="space-y-1">
-              <label className="text-xs font-medium text-slate-700">Trade / Display Name</label>
+              <label className="text-xs font-medium text-slate-700">Trade Name</label>
               <input
                 type="text"
                 value={settings.tradeName}
@@ -207,7 +207,7 @@ export default function SettingsManager({ }: SettingsManagerProps) {
             </div>
 
             <div className="space-y-1">
-              <label className="text-xs font-medium text-slate-700">City / Location</label>
+              <label className="text-xs font-medium text-slate-700">City</label>
               <input
                 type="text"
                 value={settings.city}

@@ -413,6 +413,25 @@ export async function approveExtraShift(req: AuthRequest, res: Response): Promis
   }
 }
 
+// PUT /api/salary/extra-shifts/:id/reject
+export async function rejectExtraShift(req: AuthRequest, res: Response): Promise<void> {
+  try {
+    const { id } = req.params;
+    const { reason } = req.body;
+    const entry = await prisma.extraShiftEntry.update({
+      where: { id },
+      data: {
+        status: ApprovalStatus.REJECTED,
+        remarks: reason ? `REJECTED: ${reason}` : 'REJECTED',
+      },
+    });
+    res.status(200).json({ message: 'Extra shift entry rejected', entry });
+  } catch (error: any) {
+    console.error('rejectExtraShift error:', error);
+    res.status(500).json({ error: 'Failed to reject extra shift' });
+  }
+}
+
 // DELETE /api/salary/extra-shifts/:id
 export async function deleteExtraShift(req: AuthRequest, res: Response): Promise<void> {
   try {

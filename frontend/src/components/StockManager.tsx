@@ -2,7 +2,6 @@ import { API_BASE_URL } from '../config';
 import React, { useState, useEffect } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import {
-  Boxes,
   Plus,
   Search,
   Building2,
@@ -64,7 +63,7 @@ interface StockManagerProps {
 
 export default function StockManager({ session }: StockManagerProps) {
   const [activeSubTab, setActiveSubTab] = useState<'receipts' | 'ledger'>('receipts');
-  const [summaries, setSummaries] = useState<StockSummaryItem[]>([]);
+  const [_summaries, setSummaries] = useState<StockSummaryItem[]>([]);
   const [receipts, setReceipts] = useState<RawMaterialReceipt[]>([]);
   const [ledgerEntries, setLedgerEntries] = useState<StockLedgerEntry[]>([]);
   const [selectedCompanyId, setSelectedCompanyId] = useState<string>('');
@@ -95,6 +94,7 @@ export default function StockManager({ session }: StockManagerProps) {
     companyId: '',
     movementType: 'ISSUED_MACHINING',
     quantityOut: '',
+    uom: 'kg',
     remarks: '',
   });
 
@@ -215,7 +215,7 @@ export default function StockManager({ session }: StockManagerProps) {
         type: 'success',
         message: editingReceiptId
           ? 'Inward raw material updated successfully!'
-          : `Inward raw material recorded! New Balance: ${data.newBalance || ''} kg`,
+          : `Inward raw material recorded! New Balance: ${data.newBalance || ''} ${inwardForm.uom || ''}`.trim(),
       });
       setTimeout(() => setNotification(null), 3500);
 
@@ -259,6 +259,7 @@ export default function StockManager({ session }: StockManagerProps) {
           movementType: adjustForm.movementType,
           quantityIn: 0,
           quantityOut: parseFloat(adjustForm.quantityOut),
+          uom: adjustForm.uom || 'kg',
           remarks: adjustForm.remarks,
         }),
       });
@@ -270,7 +271,7 @@ export default function StockManager({ session }: StockManagerProps) {
 
       setNotification({
         type: 'success',
-        message: `Stock movement recorded! New Balance: ${data.newBalance} kg`,
+        message: `Stock movement recorded! New Balance: ${data.newBalance} ${adjustForm.uom || ''}`.trim(),
       });
       setTimeout(() => setNotification(null), 3500);
 
@@ -279,6 +280,7 @@ export default function StockManager({ session }: StockManagerProps) {
         companyId: selectedCompanyId || '',
         movementType: 'ISSUED_MACHINING',
         quantityOut: '',
+        uom: 'kg',
         remarks: '',
       });
       fetchStockSummary();
@@ -309,7 +311,78 @@ export default function StockManager({ session }: StockManagerProps) {
     }
   };
 
-  const totalWorkshopStock = summaries.reduce((acc, s) => acc + s.currentBalance, 0);
+  // Helper: Calculate company balance in its original units
+  const getCompanyBalanceDisplay = (companyId: string, balance: number) => {
+    const compReceipts = receipts.filter((r) => r.company?.id === companyId);
+    if (compReceipts.length === 0) {
+      return `${balance.toLocaleString('en-IN', { maximumFractionDigits: 1 })}`;
+    }
+
+    const compTotalInward = compReceipts.reduce((sum, r) => sum + Number(r.quantity || 0), 0);
+    if (compTotalInward <= 0) return `${balance.toLocaleString('en-IN')}`;
+
+    const ratio = balance > 0 ? balance / compTotalInward : 0;
+    const unitTotals: Record<string, number> = {};
+    compReceipts.forEach((r) => {
+      const uom = (r.uom || 'units').trim();
+      const netQty = Number(r.quantity || 0) * ratio;
+      unitTotals[uom] = (unitTotals[uom] || 0) + netQty;
+    });
+
+    const entries = Object.entries(unitTotals).filter(([_, qty]) => Math.round(qty * 100) / 100 > 0);
+    if (entries.length === 0) return '0';
+
+    return entries
+      .map(([unit, qty]) => `${qty.toLocaleString('en-IN', { maximumFractionDigits: 1 })} ${unit}`)
+      .join(' • ');
+  };
+
+  // Helper: Extract original unit for each ledger entry
+  const getLedgerRowUnit = (row: StockLedgerEntry, companyId?: string): string => {
+    const remarks = row.remarks || '';
+
+    // 1. Direct unit in remarks like "(nos)", "[pcs]", "1000 nos", "(2000 nos)"
+    const match = remarks.match(/(?:\[|\(|\s)(kg|nos|pcs|sets|meters|tonnes)(?:\]|\)|\s|$)/i);
+    if (match && match[1]) {
+      return match[1].toLowerCase();
+    }
+
+    // 2. Material Name match with receipts
+    const matMatch = remarks.match(/Material:\s*([^•\(\[\n]+)/i);
+    if (matMatch && matMatch[1]) {
+      const targetMat = matMatch[1].trim().toLowerCase();
+      const matchedRec = receipts.find(
+        (r) => r.materialName.toLowerCase() === targetMat && (!companyId || r.company?.id === companyId)
+      );
+      if (matchedRec && matchedRec.uom) {
+        return matchedRec.uom.toLowerCase();
+      }
+    }
+
+    // 3. Customer DC match with receipts
+    const dcMatch = remarks.match(/Customer DC:\s*([^\s•]+)/i);
+    if (dcMatch && dcMatch[1]) {
+      const targetDc = dcMatch[1].trim();
+      const matchedRec = receipts.find(
+        (r) => r.challanNumber === targetDc && (!companyId || r.company?.id === companyId)
+      );
+      if (matchedRec && matchedRec.uom) {
+        return matchedRec.uom.toLowerCase();
+      }
+    }
+
+    // 4. If company only uses a single unit
+    if (companyId) {
+      const compUnits = Array.from(
+        new Set(receipts.filter((r) => r.company?.id === companyId).map((r) => r.uom.toLowerCase()))
+      );
+      if (compUnits.length === 1) {
+        return compUnits[0];
+      }
+    }
+
+    return '';
+  };
 
   const filteredReceipts = receipts.filter(r =>
     r.company.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
@@ -326,11 +399,10 @@ export default function StockManager({ session }: StockManagerProps) {
             initial={{ opacity: 0, y: -10 }}
             animate={{ opacity: 1, y: 0 }}
             exit={{ opacity: 0, y: -10 }}
-            className={`p-4 rounded-2xl border text-xs font-medium flex items-center justify-between ${
-              notification.type === 'success'
+            className={`p-4 rounded-2xl border text-xs font-medium flex items-center justify-between ${notification.type === 'success'
                 ? 'bg-emerald-50 text-emerald-800 border-emerald-200'
                 : 'bg-rose-50 text-rose-800 border-rose-200'
-            }`}
+              }`}
           >
             <div className="flex items-center gap-2">
               {notification.type === 'success' ? (
@@ -359,13 +431,21 @@ export default function StockManager({ session }: StockManagerProps) {
         <div className="flex items-center gap-2.5">
           <button
             onClick={() => {
+              const defaultUom = receipts.find(r => r.company.id === selectedCompanyId)?.uom || 'kg';
+              setAdjustForm({
+                companyId: selectedCompanyId || (companies[0]?.id || ''),
+                movementType: 'ISSUED_MACHINING',
+                quantityOut: '',
+                uom: defaultUom,
+                remarks: '',
+              });
               setFormError(null);
               setAdjustModalOpen(true);
             }}
             className="flex items-center gap-1.5 px-3.5 py-2.5 rounded-2xl border border-slate-200 text-slate-700 bg-white hover:bg-slate-50 text-xs font-medium transition-colors whitespace-nowrap"
           >
             <ArrowUpRight className="w-4 h-4 text-slate-500" />
-            <span>Issue / Scrap</span>
+            <span>Issue Raw Stock</span>
           </button>
 
           <button
@@ -387,28 +467,13 @@ export default function StockManager({ session }: StockManagerProps) {
             className="flex items-center gap-2 px-4 py-2.5 rounded-2xl bg-white border border-slate-300 text-slate-900 text-xs font-semibold hover:bg-slate-50 hover:border-slate-400 active:scale-[0.99] transition-all shadow-2xs whitespace-nowrap"
           >
             <Plus className="w-4 h-4" />
-            <span>Record Inward Stock</span>
+            <span>Record Inward Raw Stock</span>
           </button>
         </div>
       </div>
 
-      {/* 3 Metric Cards */}
-      <div className="grid grid-cols-1 sm:grid-cols-3 gap-5">
-        <div className="p-6 rounded-3xl border border-slate-200 bg-white shadow-subtle flex flex-col justify-between">
-          <div className="flex items-center justify-between">
-            <span className="text-xs font-medium text-slate-500">Total Raw Stock in Workshop</span>
-            <span className="w-8 h-8 rounded-2xl bg-slate-100 flex items-center justify-center text-slate-700">
-              <Boxes className="w-4 h-4" />
-            </span>
-          </div>
-          <div className="mt-4">
-            <div className="text-2xl font-semibold text-slate-900 tracking-tight">
-              {totalWorkshopStock.toLocaleString('en-IN', { maximumFractionDigits: 1 })} kg
-            </div>
-            <div className="text-xs text-slate-500 font-normal mt-1">Across all registered clients</div>
-          </div>
-        </div>
-
+      {/* Metric Card */}
+      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-5">
         <div className="p-6 rounded-3xl border border-slate-200 bg-white shadow-subtle flex flex-col justify-between">
           <div className="flex items-center justify-between">
             <span className="text-xs font-medium text-slate-500">Total Customer Inward Slips</span>
@@ -421,40 +486,25 @@ export default function StockManager({ session }: StockManagerProps) {
             <div className="text-xs text-slate-500 font-normal mt-1">Logged with customer delivery notes</div>
           </div>
         </div>
-
-        <div className="p-6 rounded-3xl border border-slate-200 bg-white shadow-subtle flex flex-col justify-between">
-          <div className="flex items-center justify-between">
-            <span className="text-xs font-medium text-slate-500">Negative Stock Protection</span>
-            <span className="w-8 h-8 rounded-2xl bg-emerald-50 text-emerald-700 flex items-center justify-center font-semibold text-xs border border-emerald-200">
-              Active
-            </span>
-          </div>
-          <div className="mt-4">
-            <div className="text-base font-semibold text-slate-900 tracking-tight">Zero Unauthorized Negatives</div>
-            <div className="text-xs text-slate-500 font-normal mt-1">Enforced at database and API levels</div>
-          </div>
-        </div>
       </div>
 
       {/* Sub-Tabs: Inward Receipts vs Company Stock Ledger */}
       <div className="flex items-center gap-2 border-b border-slate-100 pb-2">
         <button
           onClick={() => setActiveSubTab('receipts')}
-          className={`px-4 py-2 rounded-2xl text-xs font-medium transition-all ${
-            activeSubTab === 'receipts'
+          className={`px-4 py-2 rounded-2xl text-xs font-medium transition-all ${activeSubTab === 'receipts'
               ? 'bg-slate-100 border border-slate-300 text-slate-900 font-semibold shadow-2xs'
               : 'bg-white border border-slate-200 text-slate-600 hover:text-slate-900 hover:border-slate-300'
-          } whitespace-nowrap`}
+            } whitespace-nowrap`}
         >
           Customer Inward Receipts ({receipts.length})
         </button>
         <button
           onClick={() => setActiveSubTab('ledger')}
-          className={`px-4 py-2 rounded-2xl text-xs font-medium transition-all ${
-            activeSubTab === 'ledger'
+          className={`px-4 py-2 rounded-2xl text-xs font-medium transition-all ${activeSubTab === 'ledger'
               ? 'bg-slate-100 border border-slate-300 text-slate-900 font-semibold shadow-2xs'
               : 'bg-white border border-slate-200 text-slate-600 hover:text-slate-900 hover:border-slate-300'
-          } whitespace-nowrap`}
+            } whitespace-nowrap`}
         >
           Company-Wise Stock Ledger
         </button>
@@ -485,10 +535,10 @@ export default function StockManager({ session }: StockManagerProps) {
                   <tr className="border-b border-slate-100 bg-slate-50/60 text-slate-400 font-medium">
                     <th className="py-3.5 px-6 font-medium whitespace-nowrap text-left">RECEIPT DATE</th>
                     <th className="py-3.5 px-4 font-medium whitespace-nowrap text-left">CUSTOMER COMPANY</th>
-                    <th className="py-3.5 px-4 font-medium whitespace-nowrap text-left">RAW MATERIAL / GRADE</th>
+                    <th className="py-3.5 px-4 font-medium whitespace-nowrap text-left">MATERIAL NAME</th>
                     <th className="py-3.5 px-4 font-medium whitespace-nowrap text-left">QUANTITY</th>
-                    <th className="py-3.5 px-4 font-medium whitespace-nowrap text-left">CUSTOMER DC NO</th>
-                    <th className="py-3.5 px-6 font-medium whitespace-nowrap text-left">VEHICLE / TRANSPORTER</th>
+                    <th className="py-3.5 px-4 font-medium whitespace-nowrap text-left">CUSTOMER DC</th>
+                    <th className="py-3.5 px-6 font-medium whitespace-nowrap text-left">VEHICLE NUMBER</th>
                     {session.role === 'ADMIN' && (
                       <th className="py-3.5 px-4 font-medium whitespace-nowrap text-left">ACTIONS</th>
                     )}
@@ -612,8 +662,8 @@ export default function StockManager({ session }: StockManagerProps) {
             <div className="p-3 px-5 rounded-2xl bg-slate-50 border border-slate-200 flex items-center gap-4">
               <div>
                 <div className="text-[10px] text-slate-400 uppercase font-medium">Available Balance</div>
-                <div className="text-lg font-semibold text-slate-900 tracking-tight">
-                  {selectedCompanyBalance.toLocaleString('en-IN', { maximumFractionDigits: 1 })} kg
+                <div className="text-base sm:text-lg font-semibold text-slate-900 tracking-tight">
+                  {getCompanyBalanceDisplay(selectedCompanyId, selectedCompanyBalance)}
                 </div>
               </div>
               <div className="w-2 h-2 rounded-full bg-emerald-500" />
@@ -642,44 +692,46 @@ export default function StockManager({ session }: StockManagerProps) {
                       </td>
                     </tr>
                   ) : (
-                    ledgerEntries.map((row) => (
-                      <tr key={row.id} className="hover:bg-slate-50/60 transition-colors">
-                        <td className="py-3.5 px-6 text-slate-500 font-normal whitespace-nowrap">
-                          {new Date(row.transactionDate).toLocaleDateString('en-IN', {
-                            day: '2-digit',
-                            month: 'short',
-                            year: 'numeric',
-                          })}
-                        </td>
-                        <td className="py-3.5 px-4 whitespace-nowrap">
-                          <span
-                            className={`inline-flex px-2 py-0.5 rounded-full text-[10px] font-medium border ${
-                              row.movementType === 'INWARD_RECEIPT'
-                                ? 'bg-emerald-50 text-emerald-800 border-emerald-200'
-                                : row.movementType === 'ISSUED_MACHINING'
-                                ? 'bg-blue-50 text-blue-800 border-blue-200'
-                                : row.movementType === 'SCRAP_WASTAGE'
-                                ? 'bg-amber-50 text-amber-800 border-amber-200'
-                                : 'bg-slate-100 text-slate-700 border-slate-200'
-                            }`}
-                          >
-                            {row.movementType.replace('_', ' ')}
-                          </span>
-                        </td>
-                        <td className="py-3.5 px-4 font-medium text-emerald-600 whitespace-nowrap">
-                          {Number(row.quantityIn) > 0 ? `+${Number(row.quantityIn)} kg` : '-'}
-                        </td>
-                        <td className="py-3.5 px-4 font-medium text-rose-600 whitespace-nowrap">
-                          {Number(row.quantityOut) > 0 ? `-${Number(row.quantityOut)} kg` : '-'}
-                        </td>
-                        <td className="py-3.5 px-4 font-semibold text-slate-900 whitespace-nowrap">
-                          {Number(row.balance).toLocaleString('en-IN')} kg
-                        </td>
-                        <td className="py-3.5 px-6 text-slate-500 font-normal whitespace-nowrap">
-                          {row.remarks || '-'}
-                        </td>
-                      </tr>
-                    ))
+                    ledgerEntries.map((row) => {
+                      const rowUnit = getLedgerRowUnit(row, selectedCompanyId);
+                      return (
+                        <tr key={row.id} className="hover:bg-slate-50/60 transition-colors">
+                          <td className="py-3.5 px-6 text-slate-500 font-normal whitespace-nowrap">
+                            {new Date(row.transactionDate).toLocaleDateString('en-IN', {
+                              day: '2-digit',
+                              month: 'short',
+                              year: 'numeric',
+                            })}
+                          </td>
+                          <td className="py-3.5 px-4 whitespace-nowrap">
+                            <span
+                              className={`inline-flex px-2 py-0.5 rounded-full text-[10px] font-medium border ${row.movementType === 'INWARD_RECEIPT'
+                                  ? 'bg-emerald-50 text-emerald-800 border-emerald-200'
+                                  : row.movementType === 'ISSUED_MACHINING'
+                                    ? 'bg-blue-50 text-blue-800 border-blue-200'
+                                    : row.movementType === 'SCRAP_WASTAGE'
+                                      ? 'bg-amber-50 text-amber-800 border-amber-200'
+                                      : 'bg-slate-100 text-slate-700 border-slate-200'
+                                }`}
+                            >
+                              {row.movementType.replace('_', ' ')}
+                            </span>
+                          </td>
+                          <td className="py-3.5 px-4 font-medium text-emerald-600 whitespace-nowrap">
+                            {Number(row.quantityIn) > 0 ? `+${Number(row.quantityIn).toLocaleString('en-IN')}${rowUnit ? ' ' + rowUnit : ''}` : '-'}
+                          </td>
+                          <td className="py-3.5 px-4 font-medium text-rose-600 whitespace-nowrap">
+                            {Number(row.quantityOut) > 0 ? `-${Number(row.quantityOut).toLocaleString('en-IN')}${rowUnit ? ' ' + rowUnit : ''}` : '-'}
+                          </td>
+                          <td className="py-3.5 px-4 font-semibold text-slate-900 whitespace-nowrap">
+                            {Number(row.balance).toLocaleString('en-IN')}{rowUnit ? ' ' + rowUnit : ''}
+                          </td>
+                          <td className="py-3.5 px-6 text-slate-500 font-normal whitespace-nowrap">
+                            {row.remarks || '-'}
+                          </td>
+                        </tr>
+                      );
+                    })
                   )}
                 </tbody>
               </table>
@@ -699,8 +751,8 @@ export default function StockManager({ session }: StockManagerProps) {
       <SlideOverDrawer
         isOpen={inwardModalOpen}
         onClose={() => setInwardModalOpen(false)}
-        title={editingReceiptId ? "Edit Inward Material" : "Record Customer Raw Material Arrival"}
-        subtitle={editingReceiptId ? "Update receipt and adjust customer stock ledger" : "Adds incoming steel to customer stock ledger"}
+        title={editingReceiptId ? "Edit Raw Stock Receipt" : "Record Raw Stock Receipt"}
+        subtitle={editingReceiptId ? "Update receipt and adjust customer stock ledger" : "Adds incoming material to customer stock ledger"}
         footer={
           <>
             <button
@@ -715,7 +767,7 @@ export default function StockManager({ session }: StockManagerProps) {
               form="inward-form"
               className="px-5 py-2.5 rounded-xl bg-white border border-slate-300 text-slate-900 text-xs font-semibold hover:bg-slate-50 hover:border-slate-400 active:scale-95 transition-all shadow-2xs whitespace-nowrap"
             >
-              {editingReceiptId ? 'Update Receipt' : 'Save & Update Stock'}
+              {editingReceiptId ? 'Update Receipt' : 'Save Raw Stock Receipt'}
             </button>
           </>
         }
@@ -744,7 +796,7 @@ export default function StockManager({ session }: StockManagerProps) {
 
           {/* Raw Material Name */}
           <div className="space-y-1.5">
-            <label className="text-xs font-semibold text-slate-700">Raw Material / Steel Grade *</label>
+            <label className="text-xs font-semibold text-slate-700">Material Name *</label>
             <input
               type="text"
               required
@@ -757,7 +809,7 @@ export default function StockManager({ session }: StockManagerProps) {
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
             {/* Quantity */}
             <div className="space-y-1.5">
-              <label className="text-xs font-semibold text-slate-700">Received Quantity (Weight) *</label>
+              <label className="text-xs font-semibold text-slate-700">Received Quantity *</label>
               <input
                 type="number"
                 step="0.01"
@@ -771,7 +823,7 @@ export default function StockManager({ session }: StockManagerProps) {
 
             {/* UOM */}
             <div className="space-y-1.5">
-              <label className="text-xs font-semibold text-slate-700">Unit of Measurement</label>
+              <label className="text-xs font-semibold text-slate-700">Unit of Measurement *</label>
               <CustomUnitSelect
                 value={inwardForm.uom}
                 onChange={(val) => setInwardForm({ ...inwardForm, uom: val })}
@@ -783,7 +835,7 @@ export default function StockManager({ session }: StockManagerProps) {
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
             {/* Customer DC Number */}
             <div className="space-y-1.5">
-              <label className="text-xs font-semibold text-slate-700">Customer Delivery Note / DC No</label>
+              <label className="text-xs font-semibold text-slate-700">Customer DC Number</label>
               <input
                 type="text"
                 value={inwardForm.challanNumber}
@@ -794,7 +846,7 @@ export default function StockManager({ session }: StockManagerProps) {
 
             {/* Vehicle Number */}
             <div className="space-y-1.5">
-              <label className="text-xs font-semibold text-slate-700">Vehicle / Transporter</label>
+              <label className="text-xs font-semibold text-slate-700">Vehicle Number</label>
               <input
                 type="text"
                 value={inwardForm.vehicleNumber}
@@ -806,7 +858,7 @@ export default function StockManager({ session }: StockManagerProps) {
 
           {/* Remarks */}
           <div className="space-y-1.5">
-            <label className="text-xs font-semibold text-slate-700">Remarks (Optional)</label>
+            <label className="text-xs font-semibold text-slate-700">Remarks</label>
             <input
               type="text"
               value={inwardForm.remarks}
@@ -823,7 +875,7 @@ export default function StockManager({ session }: StockManagerProps) {
       <SlideOverDrawer
         isOpen={adjustModalOpen}
         onClose={() => setAdjustModalOpen(false)}
-        title="Record Stock Outward / Scrap"
+        title="Record Raw Stock Issue or Scrap"
         subtitle="Issues raw stock to machining or records scrap"
         footer={
           <>
@@ -873,34 +925,45 @@ export default function StockManager({ session }: StockManagerProps) {
               value={adjustForm.movementType}
               onChange={(val) => setAdjustForm({ ...adjustForm, movementType: val })}
               options={[
-                { value: 'ISSUED_MACHINING', label: 'Issue to Machine Shop (Production)' },
-                { value: 'SCRAP_WASTAGE', label: 'Scrap / Machining Wastage' },
+                { value: 'ISSUED_MACHINING', label: 'Issue to Machine Shop' },
+                { value: 'SCRAP_WASTAGE', label: 'Machining Scrap' },
                 { value: 'RETURNED_RAW', label: 'Return Raw Stock to Customer' },
               ]}
               searchable={false}
             />
           </div>
 
-          {/* Outward Quantity */}
-          <div className="space-y-1.5">
-            <label className="text-xs font-semibold text-slate-700">Quantity (kg) *</label>
-            <input
-              type="number"
-              step="0.01"
-              min="0.01"
-              required
-              value={adjustForm.quantityOut}
-              onChange={(e) => setAdjustForm({ ...adjustForm, quantityOut: e.target.value })}
-              className="w-full px-3.5 py-2.5 rounded-xl border border-slate-200 bg-white text-xs text-slate-900 font-semibold outline-none focus:border-slate-300"
-            />
-            <div className="text-[11px] text-slate-400">
-              System verifies that quantity does not exceed current stock.
+          {/* Outward Quantity & Unit */}
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+            <div className="space-y-1.5">
+              <label className="text-xs font-semibold text-slate-700">Quantity *</label>
+              <input
+                type="number"
+                step="0.01"
+                min="0.01"
+                required
+                value={adjustForm.quantityOut}
+                onChange={(e) => setAdjustForm({ ...adjustForm, quantityOut: e.target.value })}
+                className="w-full px-3.5 py-2.5 rounded-xl border border-slate-200 bg-white text-xs text-slate-900 font-semibold outline-none focus:border-slate-300"
+              />
             </div>
+
+            <div className="space-y-1.5">
+              <label className="text-xs font-semibold text-slate-700">Unit of Measurement *</label>
+              <CustomUnitSelect
+                value={adjustForm.uom}
+                onChange={(val) => setAdjustForm({ ...adjustForm, uom: val })}
+                placeholder="-- Select Unit --"
+              />
+            </div>
+          </div>
+          <div className="text-[11px] text-slate-400">
+            System verifies that quantity does not exceed current stock.
           </div>
 
           {/* Remarks */}
           <div className="space-y-1.5">
-            <label className="text-xs font-semibold text-slate-700">Remarks / Reason</label>
+            <label className="text-xs font-semibold text-slate-700">Remarks</label>
             <input
               type="text"
               value={adjustForm.remarks}

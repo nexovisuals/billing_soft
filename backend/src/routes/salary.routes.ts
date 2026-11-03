@@ -14,6 +14,7 @@ import {
   updateExtraShift,
   deleteExtraShift,
   approveExtraShift,
+  rejectExtraShift,
   getSalaryRecords,
   generateSalaries,
   markSalaryPaid,
@@ -36,15 +37,16 @@ router.get('/overtime', authenticate, getOvertime);
 router.post('/overtime', authenticate, recordOvertime);
 router.put('/overtime/:id', authenticate, requireRole([Role.ADMIN]), updateOvertime);
 router.delete('/overtime/:id', authenticate, requireRole([Role.ADMIN]), deleteOvertime);
-router.put('/overtime/:id/approve', authenticate, requireRole([Role.ADMIN]), approveOvertime);
-router.put('/overtime/:id/reject', authenticate, requireRole([Role.ADMIN]), rejectOvertime);
+router.put('/overtime/:id/approve', authenticate, requireRole([Role.ADMIN, Role.STAFF]), approveOvertime);
+router.put('/overtime/:id/reject', authenticate, requireRole([Role.ADMIN, Role.STAFF]), rejectOvertime);
 
 // Extra Shifts
 router.get('/extra-shifts', authenticate, getExtraShifts);
 router.post('/extra-shifts', authenticate, recordExtraShift);
 router.put('/extra-shifts/:id', authenticate, requireRole([Role.ADMIN]), updateExtraShift);
 router.delete('/extra-shifts/:id', authenticate, requireRole([Role.ADMIN]), deleteExtraShift);
-router.put('/extra-shifts/:id/approve', authenticate, requireRole([Role.ADMIN]), approveExtraShift);
+router.put('/extra-shifts/:id/approve', authenticate, requireRole([Role.ADMIN, Role.STAFF]), approveExtraShift);
+router.put('/extra-shifts/:id/reject', authenticate, requireRole([Role.ADMIN, Role.STAFF]), rejectExtraShift);
 
 // Salary Records & Calculation Engine
 router.get('/records', authenticate, getSalaryRecords);

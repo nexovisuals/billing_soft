@@ -537,74 +537,74 @@ export default function InvoiceManager({ session }: InvoiceManagerProps) {
       </AnimatePresence>
 
       {/* Top Banner & KPI Cards */}
-      <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
-        <div className="p-5 rounded-2xl bg-white border border-slate-200/80 shadow-card">
+      <div className="grid grid-cols-2 lg:grid-cols-4 gap-3 sm:gap-4">
+        <div className="p-3.5 sm:p-5 rounded-2xl bg-white border border-slate-200/80 shadow-card">
           <div className="flex items-center justify-between">
-            <span className="text-xs font-medium text-slate-500 uppercase tracking-wider">
+            <span className="text-[10px] sm:text-xs font-medium text-slate-500 uppercase tracking-wider truncate">
               Total Invoices
             </span>
-            <div className="w-9 h-9 rounded-xl bg-slate-100 flex items-center justify-center text-slate-700">
+            <div className="w-8 h-8 sm:w-9 sm:h-9 rounded-xl bg-slate-100 flex items-center justify-center text-slate-700 shrink-0">
               <FileText className="w-4 h-4" />
             </div>
           </div>
-          <div className="mt-3">
-            <span className="text-2xl font-semibold text-slate-900 tracking-tight">
+          <div className="mt-2 sm:mt-3">
+            <span className="text-lg sm:text-2xl font-semibold text-slate-900 tracking-tight">
               {metrics.totalInvoices}
             </span>
-            <span className="text-xs text-slate-500 ml-2">billed records</span>
+            <span className="text-[10px] sm:text-xs text-slate-500 ml-1.5 sm:ml-2">billed records</span>
           </div>
         </div>
 
-        <div className="p-5 rounded-2xl bg-white border border-slate-200/80 shadow-card">
+        <div className="p-3.5 sm:p-5 rounded-2xl bg-white border border-slate-200/80 shadow-card">
           <div className="flex items-center justify-between">
-            <span className="text-xs font-medium text-slate-500 uppercase tracking-wider">
+            <span className="text-[10px] sm:text-xs font-medium text-slate-500 uppercase tracking-wider truncate">
               Total Invoiced (₹)
             </span>
-            <div className="w-9 h-9 rounded-xl bg-slate-100 flex items-center justify-center text-slate-800">
+            <div className="w-8 h-8 sm:w-9 sm:h-9 rounded-xl bg-slate-100 flex items-center justify-center text-slate-800 shrink-0">
               <TrendingUp className="w-4 h-4" />
             </div>
           </div>
-          <div className="mt-3">
-            <span className="text-2xl font-semibold text-slate-900 tracking-tight">
+          <div className="mt-2 sm:mt-3">
+            <span className="text-lg sm:text-2xl font-semibold text-slate-900 tracking-tight">
               ₹{metrics.totalInvoicedAmount.toLocaleString('en-IN', { maximumFractionDigits: 0 })}
             </span>
-            <span className="text-xs text-slate-500 ml-2">gross billing</span>
+            <span className="text-[10px] sm:text-xs text-slate-500 ml-1.5 sm:ml-2">gross</span>
           </div>
         </div>
 
-        <div className="p-5 rounded-2xl bg-white border border-slate-200/80 shadow-card">
+        <div className="p-3.5 sm:p-5 rounded-2xl bg-white border border-slate-200/80 shadow-card">
           <div className="flex items-center justify-between">
-            <span className="text-xs font-medium text-slate-500 uppercase tracking-wider">
+            <span className="text-[10px] sm:text-xs font-medium text-slate-500 uppercase tracking-wider truncate">
               Outstanding Due
             </span>
-            <div className="w-9 h-9 rounded-xl bg-amber-50 flex items-center justify-center text-amber-600">
+            <div className="w-8 h-8 sm:w-9 sm:h-9 rounded-xl bg-amber-50 flex items-center justify-center text-amber-600 shrink-0">
               <Clock className="w-4 h-4" />
             </div>
           </div>
-          <div className="mt-3">
-            <span className="text-2xl font-semibold text-slate-900 tracking-tight">
+          <div className="mt-2 sm:mt-3">
+            <span className="text-lg sm:text-2xl font-semibold text-slate-900 tracking-tight">
               ₹{metrics.totalOutstandingDue.toLocaleString('en-IN', { maximumFractionDigits: 0 })}
             </span>
-            <span className="text-xs text-amber-700 font-medium ml-2">
+            <span className="text-[10px] sm:text-xs text-amber-700 font-medium ml-1.5 sm:ml-2">
               {metrics.unpaidInvoices} pending
             </span>
           </div>
         </div>
 
-        <div className="p-5 rounded-2xl bg-white border border-slate-200/80 shadow-card">
+        <div className="p-3.5 sm:p-5 rounded-2xl bg-white border border-slate-200/80 shadow-card">
           <div className="flex items-center justify-between">
-            <span className="text-xs font-medium text-slate-500 uppercase tracking-wider">
+            <span className="text-[10px] sm:text-xs font-medium text-slate-500 uppercase tracking-wider truncate">
               Collected Amount
             </span>
-            <div className="w-9 h-9 rounded-xl bg-emerald-50 flex items-center justify-center text-emerald-600">
+            <div className="w-8 h-8 sm:w-9 sm:h-9 rounded-xl bg-emerald-50 flex items-center justify-center text-emerald-600 shrink-0">
               <IndianRupee className="w-4 h-4" />
             </div>
           </div>
-          <div className="mt-3">
-            <span className="text-2xl font-semibold text-slate-900 tracking-tight">
+          <div className="mt-2 sm:mt-3">
+            <span className="text-lg sm:text-2xl font-semibold text-slate-900 tracking-tight">
               ₹{metrics.totalCollectedAmount.toLocaleString('en-IN', { maximumFractionDigits: 0 })}
             </span>
-            <span className="text-xs text-emerald-700 font-medium ml-2">realized</span>
+            <span className="text-[10px] sm:text-xs text-emerald-700 font-medium ml-1.5 sm:ml-2">realized</span>
           </div>
         </div>
       </div>
@@ -612,12 +612,12 @@ export default function InvoiceManager({ session }: InvoiceManagerProps) {
       {/* Control Bar: Filters, Search, and Action Button */}
       <div className="flex flex-col md:flex-row items-stretch md:items-center justify-between gap-4">
         {/* Status Filter Ribbon */}
-        <div className="flex items-center gap-1.5 p-1 rounded-2xl bg-slate-100 border border-slate-200/80 overflow-x-auto">
+        <div className="flex items-center gap-1.5 p-1 rounded-2xl bg-slate-100 border border-slate-200/80 overflow-x-auto max-w-full">
           {(['ALL', 'UNPAID', 'PARTIALLY_PAID', 'PAID', 'CANCELLED'] as const).map(status => (
             <button
               key={status}
               onClick={() => setStatusFilter(status)}
-              className={`px-3.5 py-1.5 rounded-xl text-xs font-medium transition-all whitespace-nowrap ${
+              className={`px-3.5 py-1.5 rounded-xl text-xs font-medium transition-all whitespace-nowrap shrink-0 ${
                 statusFilter === status
                   ? 'bg-white text-slate-900 shadow-sm'
                   : 'text-slate-600 hover:text-slate-900'
@@ -649,23 +649,23 @@ export default function InvoiceManager({ session }: InvoiceManagerProps) {
             />
           </div>
 
-          {/* Generate Tax Invoice Button */}
+          {/* Generate Invoice Button */}
           {(session.role === 'ADMIN' || session.role === 'STAFF') && (
             <button
               onClick={handleOpenModal}
-              className="flex items-center gap-2 px-4 py-2 rounded-2xl bg-white border border-slate-300 text-slate-900 text-xs font-semibold hover:bg-slate-50 hover:border-slate-400 transition-all shadow-2xs whitespace-nowrap"
+              className="flex items-center gap-2 px-4 py-2 rounded-2xl bg-white border border-slate-300 text-slate-900 text-xs font-semibold hover:bg-slate-50 hover:border-slate-400 transition-all shadow-2xs whitespace-nowrap shrink-0"
             >
-              <Plus className="w-4 h-4" />
-              <span>Generate Tax Invoice</span>
+              <Plus className="w-4 h-4 shrink-0" />
+              <span>Create Invoice</span>
             </button>
           )}
         </div>
       </div>
 
       {/* Invoices Table */}
-      <div className="bg-white border border-slate-200/80 rounded-3xl shadow-card overflow-hidden">
-        <div className="overflow-x-auto">
-          <table className="w-full text-left text-xs text-slate-700">
+      <div className="bg-white border border-slate-200/80 rounded-2xl sm:rounded-3xl shadow-card overflow-hidden w-full max-w-full">
+        <div className="overflow-x-auto w-full max-w-full">
+          <table className="w-full min-w-[700px] text-left text-xs text-slate-700">
             <thead className="bg-slate-50/75 border-b border-slate-200/80 text-[11px] font-semibold text-slate-500 uppercase tracking-wider">
               <tr>
                 <th className="py-3.5 px-4 whitespace-nowrap text-left">Invoice No.</th>
@@ -1013,17 +1013,17 @@ export default function InvoiceManager({ session }: InvoiceManagerProps) {
                     {/* Consolidated Items Table */}
                     <div>
                       <label className="block text-xs font-semibold text-slate-700 uppercase tracking-wider mb-2">
-                        Consolidated Dispatched Parts & Rates
+                        Dispatched Items and Rates
                       </label>
                       <div className="border border-slate-200 rounded-2xl overflow-hidden">
                         <table className="w-full text-left text-xs">
                           <thead className="bg-slate-50 text-slate-500 text-[11px] font-medium border-b border-slate-200">
                             <tr>
-                              <th className="py-2.5 px-3 whitespace-nowrap text-left">Description & Part No</th>
-                              <th className="py-2.5 px-2 text-left w-20 whitespace-nowrap">SAC</th>
+                              <th className="py-2.5 px-3 whitespace-nowrap text-left">Description</th>
+                              <th className="py-2.5 px-2 text-left w-20 whitespace-nowrap">SAC Code</th>
                               <th className="py-2.5 px-2 text-left w-24 whitespace-nowrap">Quantity</th>
                               <th className="py-2.5 px-2 text-left w-28 whitespace-nowrap">Rate (₹)</th>
-                              <th className="py-2.5 px-3 text-left w-32 whitespace-nowrap">Line Amount (₹)</th>
+                              <th className="py-2.5 px-3 text-left w-32 whitespace-nowrap">Amount (₹)</th>
                             </tr>
                           </thead>
                           <tbody className="divide-y divide-slate-100">
@@ -1189,7 +1189,7 @@ export default function InvoiceManager({ session }: InvoiceManagerProps) {
       >
         <form id="edit-invoice-form" onSubmit={handleUpdateInvoiceSubmit} className="space-y-4">
           <div className="space-y-1.5">
-            <label className="text-xs font-semibold text-slate-700">Buyer's Order / PO Reference</label>
+            <label className="text-xs font-semibold text-slate-700">Buyer Order Number</label>
             <input
               type="text"
               value={editOrderNo}
@@ -1199,7 +1199,7 @@ export default function InvoiceManager({ session }: InvoiceManagerProps) {
           </div>
 
           <div className="space-y-1.5">
-            <label className="text-xs font-semibold text-slate-700">Buyer's Order Date</label>
+            <label className="text-xs font-semibold text-slate-700">Buyer Order Date</label>
             <CustomDatePicker
               value={editOrderDate}
               onChange={(dateStr) => setEditOrderDate(dateStr)}
@@ -1207,7 +1207,7 @@ export default function InvoiceManager({ session }: InvoiceManagerProps) {
           </div>
 
           <div className="space-y-1.5">
-            <label className="text-xs font-semibold text-slate-700">General Remarks / Notes</label>
+            <label className="text-xs font-semibold text-slate-700">Remarks</label>
             <textarea
               rows={4}
               value={editRemarks}

@@ -11,7 +11,8 @@ import {
   FileCode,
   Tag,
   CheckCircle2,
-  AlertCircle
+  AlertCircle,
+  Share2
 } from 'lucide-react';
 import { UserSession } from '../types';
 import SlideOverDrawer from './common/SlideOverDrawer';
@@ -197,6 +198,21 @@ export default function MaterialManager({ session }: MaterialManagerProps) {
     }
   };
 
+  const handleShareProduct = (mat: Material) => {
+    const text = `*Shri Varshini Technologies*\n⚙️ *Product:* ${mat.productName}\n🏷️ *Part No:* ${mat.partNumber || '—'}\n📄 *Drawing No:* ${mat.drawingNumber || '—'}\n💰 *Machining Rate:* ₹${Number(mat.rate).toFixed(2)} per ${mat.uom}\n🧾 *SAC Code:* ${mat.hsnSacCode} (@${mat.gstRate}% GST)`;
+
+    if (navigator.share) {
+      navigator.share({
+        title: mat.productName,
+        text,
+      }).catch(() => {});
+    } else {
+      navigator.clipboard.writeText(text);
+      setNotification({ type: 'success', message: `Product details for ${mat.productName} copied to clipboard!` });
+      setTimeout(() => setNotification(null), 3000);
+    }
+  };
+
   const filteredMaterials = materials.filter((m) => {
     const matchesSearch =
       m.productName.toLowerCase().includes(searchTerm.toLowerCase()) ||
@@ -249,17 +265,17 @@ export default function MaterialManager({ session }: MaterialManagerProps) {
 
         <button
           onClick={openAddModal}
-          className="flex items-center gap-2 px-4 py-2.5 rounded-2xl bg-white border border-slate-300 text-slate-900 text-xs font-semibold hover:bg-slate-50 hover:border-slate-400 active:scale-[0.99] transition-all shadow-2xs whitespace-nowrap"
+          className="flex items-center gap-2 px-4 py-2.5 rounded-2xl bg-white border border-slate-300 text-slate-900 text-xs font-semibold hover:bg-slate-50 hover:border-slate-400 active:scale-[0.99] transition-all shadow-2xs whitespace-nowrap shrink-0"
         >
-          <Plus className="w-4 h-4" />
-          <span>Add Part / Material</span>
+          <Plus className="w-4 h-4 shrink-0" />
+          <span>Add Product</span>
         </button>
       </div>
 
       {/* Search and Filters Bar */}
       <div className="p-4 rounded-3xl border border-slate-200 bg-white shadow-subtle flex flex-col sm:flex-row items-center justify-between gap-3">
         <div className="flex items-center gap-2 px-3.5 py-2 rounded-2xl bg-slate-50 border border-slate-200 text-slate-500 text-xs w-full sm:w-80 focus-within:border-slate-400 focus-within:bg-white transition-all">
-          <Search className="w-4 h-4 text-slate-400" />
+          <Search className="w-4 h-4 text-slate-400 shrink-0" />
           <input
             type="text"
             value={searchTerm}
@@ -269,12 +285,12 @@ export default function MaterialManager({ session }: MaterialManagerProps) {
           />
         </div>
 
-        <div className="flex items-center gap-1.5 w-full sm:w-auto">
+        <div className="flex items-center gap-1.5 w-full sm:w-auto overflow-x-auto max-w-full">
           {(['all', 'active', 'inactive'] as const).map((filter) => (
             <button
               key={filter}
               onClick={() => setStatusFilter(filter)}
-              className={`px-3.5 py-1.5 rounded-full text-xs font-medium transition-all capitalize ${
+              className={`px-3.5 py-1.5 rounded-full text-xs font-medium transition-all capitalize shrink-0 ${
                 statusFilter === filter
                   ? 'bg-slate-100 border border-slate-300 text-slate-900 font-semibold shadow-2xs'
                   : 'bg-white border border-slate-200 text-slate-600 hover:text-slate-900 hover:border-slate-300'
@@ -287,15 +303,15 @@ export default function MaterialManager({ session }: MaterialManagerProps) {
       </div>
 
       {/* Materials Table */}
-      <div className="rounded-3xl border border-slate-200 bg-white shadow-subtle overflow-hidden">
-        <div className="overflow-x-auto">
-          <table className="w-full text-left text-xs">
+      <div className="rounded-2xl sm:rounded-3xl border border-slate-200 bg-white shadow-subtle overflow-hidden w-full max-w-full">
+        <div className="overflow-x-auto w-full max-w-full">
+          <table className="w-full min-w-[700px] text-left text-xs">
             <thead>
               <tr className="border-b border-slate-100 bg-slate-50/60 text-slate-400 font-medium">
-                <th className="py-3.5 px-6 font-medium whitespace-nowrap text-left">PRODUCT & PART NO</th>
-                <th className="py-3.5 px-4 font-medium whitespace-nowrap text-left">DRAWING NO</th>
-                <th className="py-3.5 px-4 font-medium whitespace-nowrap text-left">MACHINING RATE</th>
-                <th className="py-3.5 px-4 font-medium whitespace-nowrap text-left">TAXATION (SAC / GST)</th>
+                <th className="py-3.5 px-6 font-medium whitespace-nowrap text-left">PRODUCT NAME</th>
+                <th className="py-3.5 px-4 font-medium whitespace-nowrap text-left">DRAWING NUMBER</th>
+                <th className="py-3.5 px-4 font-medium whitespace-nowrap text-left">RATE</th>
+                <th className="py-3.5 px-4 font-medium whitespace-nowrap text-left">TAX DETAILS</th>
                 <th className="py-3.5 px-4 font-medium whitespace-nowrap text-left">STATUS</th>
                 <th className="py-3.5 px-6 text-left font-medium whitespace-nowrap">ACTIONS</th>
               </tr>
@@ -384,26 +400,33 @@ export default function MaterialManager({ session }: MaterialManagerProps) {
 
                     {/* Actions */}
                     <td className="py-4 px-6 text-left whitespace-nowrap">
-                      {session.role === 'ADMIN' ? (
-                        <div className="flex items-center justify-start gap-1">
-                          <button
-                            onClick={() => openEditModal(mat)}
-                            title="Edit Part Details"
-                            className="w-7 h-7 rounded-xl border border-slate-200 flex items-center justify-center text-slate-500 hover:text-slate-900 hover:bg-slate-100 transition-colors whitespace-nowrap"
-                          >
-                            <Edit2 className="w-3.5 h-3.5" />
-                          </button>
-                          <button
-                            onClick={() => handleDelete(mat)}
-                            title="Delete / Deactivate"
-                            className="w-7 h-7 rounded-xl border border-slate-200 flex items-center justify-center text-slate-500 hover:text-rose-600 hover:bg-rose-50 transition-colors whitespace-nowrap"
-                          >
-                            <Trash2 className="w-3.5 h-3.5" />
-                          </button>
-                        </div>
-                      ) : (
-                        <span className="text-slate-400 text-xs italic">View Only</span>
-                      )}
+                      <div className="flex items-center justify-start gap-1">
+                        <button
+                          onClick={() => handleShareProduct(mat)}
+                          title="Share Product Details"
+                          className="w-7 h-7 rounded-xl border border-slate-200 flex items-center justify-center text-slate-500 hover:text-blue-600 hover:bg-blue-50 transition-colors whitespace-nowrap"
+                        >
+                          <Share2 className="w-3.5 h-3.5" />
+                        </button>
+                        {session.role === 'ADMIN' ? (
+                          <>
+                            <button
+                              onClick={() => openEditModal(mat)}
+                              title="Edit Part Details"
+                              className="w-7 h-7 rounded-xl border border-slate-200 flex items-center justify-center text-slate-500 hover:text-slate-900 hover:bg-slate-100 transition-colors whitespace-nowrap"
+                            >
+                              <Edit2 className="w-3.5 h-3.5" />
+                            </button>
+                            <button
+                              onClick={() => handleDelete(mat)}
+                              title="Delete / Deactivate"
+                              className="w-7 h-7 rounded-xl border border-slate-200 flex items-center justify-center text-slate-500 hover:text-rose-600 hover:bg-rose-50 transition-colors whitespace-nowrap"
+                            >
+                              <Trash2 className="w-3.5 h-3.5" />
+                            </button>
+                          </>
+                        ) : null}
+                      </div>
                     </td>
                   </tr>
                 ))
@@ -424,7 +447,7 @@ export default function MaterialManager({ session }: MaterialManagerProps) {
       <SlideOverDrawer
         isOpen={modalOpen}
         onClose={() => setModalOpen(false)}
-        title={editingMaterial ? 'Edit Component / Part' : 'Register New Component / Part'}
+        title={editingMaterial ? 'Edit Product' : 'Add New Product'}
         subtitle="Pre-fills default rates, drawing numbers, and SAC for Invoices and DCs"
         footer={
           <>
@@ -440,7 +463,7 @@ export default function MaterialManager({ session }: MaterialManagerProps) {
               form="material-form"
               className="px-5 py-2.5 rounded-xl bg-white border border-slate-300 text-slate-900 text-xs font-semibold hover:bg-slate-50 hover:border-slate-400 active:scale-95 transition-all shadow-2xs whitespace-nowrap"
             >
-              {editingMaterial ? 'Save Changes' : 'Register Part'}
+              {editingMaterial ? 'Save Changes' : 'Add Product'}
             </button>
           </>
         }
@@ -455,7 +478,7 @@ export default function MaterialManager({ session }: MaterialManagerProps) {
         <form id="material-form" onSubmit={handleFormSubmit} className="space-y-4">
           {/* Product Name */}
           <div className="space-y-1.5">
-            <label className="text-xs font-semibold text-slate-700">Product / Component Name *</label>
+            <label className="text-xs font-semibold text-slate-700">Product Name *</label>
             <input
               type="text"
               required
@@ -468,7 +491,7 @@ export default function MaterialManager({ session }: MaterialManagerProps) {
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
             {/* Drawing Number */}
             <div className="space-y-1.5">
-              <label className="text-xs font-semibold text-slate-700">Engineering Drawing No</label>
+              <label className="text-xs font-semibold text-slate-700">Drawing Number</label>
               <input
                 type="text"
                 value={formData.drawingNumber}
@@ -479,7 +502,7 @@ export default function MaterialManager({ session }: MaterialManagerProps) {
 
             {/* Part Number */}
             <div className="space-y-1.5">
-              <label className="text-xs font-semibold text-slate-700">Part Identification No</label>
+              <label className="text-xs font-semibold text-slate-700">Part Number</label>
               <input
                 type="text"
                 value={formData.partNumber}
@@ -492,11 +515,12 @@ export default function MaterialManager({ session }: MaterialManagerProps) {
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
             {/* Default Rate */}
             <div className="space-y-1.5">
-              <label className="text-xs font-semibold text-slate-700">Default Machining Rate (₹)</label>
+              <label className="text-xs font-semibold text-slate-700">Machining Rate (₹) *</label>
               <input
                 type="number"
                 step="0.01"
                 min="0"
+                required
                 value={formData.rate}
                 onChange={(e) => setFormData({ ...formData, rate: e.target.value === '' ? '' : parseFloat(e.target.value) || 0 })}
                 className="w-full px-3.5 py-2.5 rounded-xl border border-slate-200 bg-white text-xs text-slate-900 font-normal outline-none focus:border-slate-300"
@@ -505,7 +529,7 @@ export default function MaterialManager({ session }: MaterialManagerProps) {
 
             {/* UOM with CustomUnitSelect */}
             <div className="space-y-1.5">
-              <label className="text-xs font-semibold text-slate-700">Unit of Measurement (UOM)</label>
+              <label className="text-xs font-semibold text-slate-700">Unit of Measurement *</label>
               <CustomUnitSelect
                 value={formData.uom}
                 onChange={(val) => setFormData({ ...formData, uom: val })}
@@ -517,9 +541,10 @@ export default function MaterialManager({ session }: MaterialManagerProps) {
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
             {/* HSN/SAC */}
             <div className="space-y-1.5">
-              <label className="text-xs font-semibold text-slate-700">HSN/SAC Code</label>
+              <label className="text-xs font-semibold text-slate-700">HSN or SAC Code *</label>
               <input
                 type="text"
+                required
                 value={formData.hsnSacCode}
                 onChange={(e) => setFormData({ ...formData, hsnSacCode: e.target.value })}
                 className="w-full px-3.5 py-2.5 rounded-xl border border-slate-200 bg-white text-xs text-slate-900 font-mono font-normal outline-none focus:border-slate-300"
@@ -528,10 +553,11 @@ export default function MaterialManager({ session }: MaterialManagerProps) {
 
             {/* GST Rate */}
             <div className="space-y-1.5">
-              <label className="text-xs font-semibold text-slate-700">GST Rate (%)</label>
+              <label className="text-xs font-semibold text-slate-700">GST Rate (%) *</label>
               <input
                 type="number"
                 step="0.5"
+                required
                 value={formData.gstRate}
                 onChange={(e) => setFormData({ ...formData, gstRate: e.target.value === '' ? '' : parseFloat(e.target.value) || 0 })}
                 className="w-full px-3.5 py-2.5 rounded-xl border border-slate-200 bg-white text-xs text-slate-900 font-normal outline-none focus:border-slate-300"
@@ -541,7 +567,7 @@ export default function MaterialManager({ session }: MaterialManagerProps) {
 
           {/* Description */}
           <div className="space-y-1.5">
-            <label className="text-xs font-semibold text-slate-700">Description (Optional)</label>
+            <label className="text-xs font-semibold text-slate-700">Description</label>
             <input
               type="text"
               value={formData.description}

@@ -506,3 +506,128 @@ export async function deleteWorkerProfile(req: Request, res: Response): Promise<
     res.status(500).json({ error: 'Failed to delete worker profile' });
   }
 }
+
+// Worker / Admin: Submit Daily Attendance
+export async function submitWorkerAttendance(req: AuthRequest, res: Response): Promise<void> {
+  try {
+    if (!req.user) {
+      res.status(401).json({ error: 'Authentication required' });
+      return;
+    }
+
+    let workerId = req.body.workerId;
+    if (req.user.role === Role.WORKER) {
+      const workerProfile = await prisma.workerProfile.findUnique({
+        where: { userId: req.user.id },
+      });
+      if (!workerProfile) {
+        res.status(403).json({ error: 'Worker profile not found' });
+        return;
+      }
+      workerId = workerProfile.id;
+    } else if (!workerId) {
+      const firstWorker = await prisma.workerProfile.findFirst();
+      if (firstWorker) workerId = firstWorker.id;
+      else {
+        res.status(400).json({ error: 'Worker profile required' });
+        return;
+      }
+    }
+
+    const { date, status, remarks } = req.body;
+    const attDate = date ? new Date(date) : new Date();
+    attDate.setHours(0, 0, 0, 0);
+
+    const nextDay = new Date(attDate);
+    nextDay.setDate(nextDay.getDate() + 1);
+
+    const existing = await prisma.dailyAttendance.findFirst({
+      where: {
+        workerId,
+        date: { gte: attDate, lt: nextDay },
+      },
+    });
+
+    let record;
+    if (existing) {
+      record = await prisma.dailyAttendance.update({
+        where: { id: existing.id },
+        data: {
+          status: status || 'PRESENT',
+          remarks: remarks || null,
+          approvalStatus: req.user.role === Role.ADMIN ? ApprovalStatus.APPROVED : ApprovalStatus.PENDING,
+          approvedBy: req.user.role === Role.ADMIN ? req.user.username : null,
+        },
+      });
+    } else {
+      record = await prisma.dailyAttendance.create({
+        data: {
+          workerId,
+          date: attDate,
+          status: status || 'PRESENT',
+          remarks: remarks || null,
+          approvalStatus: req.user.role === Role.ADMIN ? ApprovalStatus.APPROVED : ApprovalStatus.PENDING,
+          approvedBy: req.user.role === Role.ADMIN ? req.user.username : null,
+        },
+      });
+    }
+
+    res.status(200).json({
+      message:
+        req.user.role === Role.ADMIN
+          ? 'Attendance recorded and approved'
+          : 'Attendance submitted successfully for admin approval',
+      record,
+    });
+  } catch (error: any) {
+    console.error('submitWorkerAttendance error:', error);
+    res.status(500).json({ error: 'Failed to submit attendance' });
+  }
+}
+
+// Worker / Admin: Get Daily Attendance History
+export async function getWorkerAttendance(req: AuthRequest, res: Response): Promise<void> {
+  try {
+    if (!req.user) {
+      res.status(401).json({ error: 'Authentication required' });
+      return;
+    }
+
+    let whereClause: any = {};
+    if (req.user.role === Role.WORKER) {
+      const workerProfile = await prisma.workerProfile.findUnique({
+        where: { userId: req.user.id },
+      });
+      if (!workerProfile) {
+        res.status(403).json({ error: 'Worker profile not found' });
+        return;
+      }
+      whereClause.workerId = workerProfile.id;
+    } else if (req.query.workerId) {
+      whereClause.workerId = req.query.workerId as string;
+    }
+
+    if (req.query.month) {
+      const [m, y] = (req.query.month as string).split('-');
+      if (m && y) {
+        const start = new Date(parseInt(y), parseInt(m) - 1, 1);
+        const end = new Date(parseInt(y), parseInt(m), 0, 23, 59, 59);
+        whereClause.date = { gte: start, lte: end };
+      }
+    }
+
+    const attendanceRecords = await prisma.dailyAttendance.findMany({
+      where: whereClause,
+      include: {
+        worker: { select: { employeeId: true, user: { select: { fullName: true } } } },
+      },
+      orderBy: { date: 'desc' },
+      take: 60,
+    });
+
+    res.status(200).json({ attendance: attendanceRecords });
+  } catch (error: any) {
+    console.error('getWorkerAttendance error:', error);
+    res.status(500).json({ error: 'Failed to fetch attendance history' });
+  }
+}

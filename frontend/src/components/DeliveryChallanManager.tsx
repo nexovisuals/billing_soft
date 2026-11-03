@@ -355,11 +355,10 @@ export default function DeliveryChallanManager({ session }: DeliveryChallanManag
             initial={{ opacity: 0, y: -10 }}
             animate={{ opacity: 1, y: 0 }}
             exit={{ opacity: 0, y: -10 }}
-            className={`p-4 rounded-2xl border text-xs font-medium flex items-center justify-between ${
-              notification.type === 'success'
+            className={`p-4 rounded-2xl border text-xs font-medium flex items-center justify-between ${notification.type === 'success'
                 ? 'bg-emerald-50 text-emerald-800 border-emerald-200'
                 : 'bg-rose-50 text-rose-800 border-rose-200'
-            }`}
+              }`}
           >
             <div className="flex items-center gap-2">
               {notification.type === 'success' ? (
@@ -379,7 +378,7 @@ export default function DeliveryChallanManager({ session }: DeliveryChallanManag
       {/* Header & Action Controls */}
       <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4 pb-2">
         <div>
-          <h2 className="text-base font-semibold text-slate-900 tracking-tight">Delivery Challans (Dispatches)</h2>
+          <h2 className="text-base font-semibold text-slate-900 tracking-tight">Delivery Challans</h2>
           <p className="text-xs text-slate-500 font-normal">
             Generate continuous sequential delivery slips for finished parts dispatched to customer companies
           </p>
@@ -387,51 +386,51 @@ export default function DeliveryChallanManager({ session }: DeliveryChallanManag
 
         <button
           onClick={openCreateModal}
-          className="flex items-center gap-2 px-4 py-2.5 rounded-2xl bg-white border border-slate-300 text-slate-900 text-xs font-semibold hover:bg-slate-50 hover:border-slate-400 active:scale-[0.99] transition-all shadow-2xs whitespace-nowrap"
+          className="flex items-center gap-2 px-3.5 sm:px-4 py-2 sm:py-2.5 rounded-2xl bg-white border border-slate-300 text-slate-900 text-xs font-semibold hover:bg-slate-50 hover:border-slate-400 active:scale-[0.99] transition-all shadow-2xs whitespace-nowrap shrink-0"
         >
-          <Plus className="w-4 h-4" />
-          <span>New Delivery Challan</span>
+          <Plus className="w-4 h-4 shrink-0" />
+          <span className="whitespace-nowrap">New Delivery Challan</span>
         </button>
       </div>
 
-      {/* 3 Metric Cards */}
-      <div className="grid grid-cols-1 sm:grid-cols-3 gap-5">
-        <div className="p-6 rounded-3xl border border-slate-200 bg-white shadow-subtle flex flex-col justify-between">
+      {/* Metric Cards - 2x2 on Mobile */}
+      <div className="grid grid-cols-2 md:grid-cols-3 gap-3 sm:gap-5">
+        <div className="p-4 sm:p-6 rounded-2xl sm:rounded-3xl border border-slate-200 bg-white shadow-subtle flex flex-col justify-between">
           <div className="flex items-center justify-between">
-            <span className="text-xs font-medium text-slate-500">Total Challans Created</span>
-            <span className="w-8 h-8 rounded-2xl bg-slate-100 flex items-center justify-center text-slate-700">
-              <Truck className="w-4 h-4" />
+            <span className="text-[11px] sm:text-xs font-medium text-slate-500 truncate">Total Challans</span>
+            <span className="w-7 h-7 sm:w-8 sm:h-8 rounded-xl sm:rounded-2xl bg-slate-100 flex items-center justify-center text-slate-700 shrink-0">
+              <Truck className="w-3.5 h-3.5 sm:w-4 sm:h-4" />
             </span>
           </div>
-          <div className="mt-4">
-            <div className="text-2xl font-semibold text-slate-900 tracking-tight">{dcs.length} Challans</div>
-            <div className="text-xs text-slate-500 font-normal mt-1">Continuous sequence starting from #368</div>
+          <div className="mt-3 sm:mt-4">
+            <div className="text-lg sm:text-2xl font-semibold text-slate-900 tracking-tight">{dcs.length} Challans</div>
+            <div className="text-[10px] sm:text-xs text-slate-500 font-normal mt-0.5 sm:mt-1 truncate">Continuous sequence from #368</div>
           </div>
         </div>
 
-        <div className="p-6 rounded-3xl border border-slate-200 bg-white shadow-subtle flex flex-col justify-between">
+        <div className="p-4 sm:p-6 rounded-2xl sm:rounded-3xl border border-slate-200 bg-white shadow-subtle flex flex-col justify-between">
           <div className="flex items-center justify-between">
-            <span className="text-xs font-medium text-slate-500">Pending Invoicing</span>
-            <span className="w-8 h-8 rounded-2xl bg-amber-50 text-amber-700 flex items-center justify-center border border-amber-200">
-              <Clock className="w-4 h-4" />
+            <span className="text-[11px] sm:text-xs font-medium text-slate-500 truncate">Pending Invoicing</span>
+            <span className="w-7 h-7 sm:w-8 sm:h-8 rounded-xl sm:rounded-2xl bg-amber-50 text-amber-700 flex items-center justify-center border border-amber-200 shrink-0">
+              <Clock className="w-3.5 h-3.5 sm:w-4 sm:h-4" />
             </span>
           </div>
-          <div className="mt-4">
-            <div className="text-2xl font-semibold text-slate-900 tracking-tight">{pendingDcsCount} Ready</div>
-            <div className="text-xs text-slate-500 font-normal mt-1">Available for consolidated monthly billing</div>
+          <div className="mt-3 sm:mt-4">
+            <div className="text-lg sm:text-2xl font-semibold text-slate-900 tracking-tight">{pendingDcsCount} Ready</div>
+            <div className="text-[10px] sm:text-xs text-slate-500 font-normal mt-0.5 sm:mt-1 truncate">Available for monthly billing</div>
           </div>
         </div>
 
-        <div className="p-6 rounded-3xl border border-slate-200 bg-white shadow-subtle flex flex-col justify-between">
+        <div className="p-4 sm:p-6 rounded-2xl sm:rounded-3xl border border-slate-200 bg-white shadow-subtle flex flex-col justify-between col-span-2 md:col-span-1">
           <div className="flex items-center justify-between">
-            <span className="text-xs font-medium text-slate-500">Invoiced Challans</span>
-            <span className="w-8 h-8 rounded-2xl bg-emerald-50 text-emerald-700 flex items-center justify-center border border-emerald-200">
-              <CheckCircle2 className="w-4 h-4" />
+            <span className="text-[11px] sm:text-xs font-medium text-slate-500 truncate">Invoiced Challans</span>
+            <span className="w-7 h-7 sm:w-8 sm:h-8 rounded-xl sm:rounded-2xl bg-emerald-50 text-emerald-700 flex items-center justify-center border border-emerald-200 shrink-0">
+              <CheckCircle2 className="w-3.5 h-3.5 sm:w-4 sm:h-4" />
             </span>
           </div>
-          <div className="mt-4">
-            <div className="text-2xl font-semibold text-slate-900 tracking-tight">{invoicedDcsCount} Billed</div>
-            <div className="text-xs text-slate-500 font-normal mt-1">Locked against duplicate invoicing</div>
+          <div className="mt-3 sm:mt-4">
+            <div className="text-lg sm:text-2xl font-semibold text-slate-900 tracking-tight">{invoicedDcsCount} Billed</div>
+            <div className="text-[10px] sm:text-xs text-slate-500 font-normal mt-0.5 sm:mt-1 truncate">Locked against duplicate billing</div>
           </div>
         </div>
       </div>
@@ -461,11 +460,10 @@ export default function DeliveryChallanManager({ session }: DeliveryChallanManag
             <button
               key={tab.key}
               onClick={() => setStatusFilter(tab.key)}
-              className={`px-3.5 py-1.5 rounded-full text-xs font-medium transition-all ${
-                statusFilter === tab.key
+              className={`px-3.5 py-1.5 rounded-full text-xs font-medium transition-all ${statusFilter === tab.key
                   ? 'bg-slate-100 border border-slate-300 text-slate-900 font-semibold shadow-2xs'
                   : 'bg-white border border-slate-200 text-slate-600 hover:text-slate-900 hover:border-slate-300'
-              } whitespace-nowrap`}
+                } whitespace-nowrap`}
             >
               {tab.label}
             </button>
@@ -474,16 +472,16 @@ export default function DeliveryChallanManager({ session }: DeliveryChallanManag
       </div>
 
       {/* Delivery Challans Table */}
-      <div className="rounded-3xl border border-slate-200 bg-white shadow-subtle overflow-hidden">
-        <div className="overflow-x-auto">
-          <table className="w-full text-left text-xs">
+      <div className="rounded-2xl sm:rounded-3xl border border-slate-200 bg-white shadow-subtle overflow-hidden w-full max-w-full">
+        <div className="overflow-x-auto w-full">
+          <table className="w-full text-left text-xs min-w-[680px]">
             <thead>
               <tr className="border-b border-slate-100 bg-slate-50/60 text-slate-400 font-medium">
                 <th className="py-3.5 px-6 font-medium whitespace-nowrap text-left">DC NUMBER</th>
                 <th className="py-3.5 px-4 font-medium whitespace-nowrap text-left">DATE</th>
                 <th className="py-3.5 px-4 font-medium whitespace-nowrap text-left">CUSTOMER COMPANY</th>
-                <th className="py-3.5 px-4 font-medium whitespace-nowrap text-left">DISPATCHED ITEMS & QTY</th>
-                <th className="py-3.5 px-4 font-medium whitespace-nowrap text-left">ORDER REF</th>
+                <th className="py-3.5 px-4 font-medium whitespace-nowrap text-left">DISPATCHED ITEMS</th>
+                <th className="py-3.5 px-4 font-medium whitespace-nowrap text-left">ORDER NUMBER</th>
                 <th className="py-3.5 px-4 font-medium whitespace-nowrap text-left">INVOICE STATUS</th>
                 <th className="py-3.5 px-6 text-left font-medium whitespace-nowrap">ACTIONS</th>
               </tr>
@@ -545,13 +543,12 @@ export default function DeliveryChallanManager({ session }: DeliveryChallanManag
                     {/* Status */}
                     <td className="py-4 px-4 whitespace-nowrap">
                       <span
-                        className={`inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-[11px] font-medium border ${
-                          dc.status === 'PENDING_INVOICING'
+                        className={`inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-[11px] font-medium border ${dc.status === 'PENDING_INVOICING'
                             ? 'bg-amber-50 text-amber-800 border-amber-200'
                             : dc.status === 'INVOICED'
-                            ? 'bg-emerald-50 text-emerald-800 border-emerald-200'
-                            : 'bg-rose-50 text-rose-800 border-rose-200'
-                        }`}
+                              ? 'bg-emerald-50 text-emerald-800 border-emerald-200'
+                              : 'bg-rose-50 text-rose-800 border-rose-200'
+                          }`}
                       >
                         {dc.status === 'PENDING_INVOICING' ? (
                           <>
@@ -697,7 +694,7 @@ export default function DeliveryChallanManager({ session }: DeliveryChallanManag
           {/* Customer Order No & E-Way Bill */}
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
             <div className="space-y-1.5">
-              <label className="text-xs font-semibold text-slate-700">Customer Order No / PO Ref</label>
+              <label className="text-xs font-semibold text-slate-700">Customer Order Number</label>
               <input
                 type="text"
                 value={formData.yourOrderNo}
@@ -707,7 +704,7 @@ export default function DeliveryChallanManager({ session }: DeliveryChallanManag
             </div>
 
             <div className="space-y-1.5">
-              <label className="text-xs font-semibold text-slate-700">E-Way Bill Number (Optional)</label>
+              <label className="text-xs font-semibold text-slate-700">E-Way Bill Number</label>
               <input
                 type="text"
                 value={formData.ewayBillNumber}
@@ -721,7 +718,7 @@ export default function DeliveryChallanManager({ session }: DeliveryChallanManag
           <div className="space-y-3 pt-2">
             <div className="flex items-center justify-between">
               <label className="text-xs font-semibold text-slate-900 uppercase tracking-wider">
-                Dispatched Parts / Components
+                Dispatched Items
               </label>
               <button
                 type="button"
@@ -729,7 +726,7 @@ export default function DeliveryChallanManager({ session }: DeliveryChallanManag
                 className="flex items-center gap-1 text-xs font-semibold text-slate-900 hover:text-slate-700 whitespace-nowrap"
               >
                 <Plus className="w-3.5 h-3.5" />
-                <span>Add Another Part</span>
+                <span>Add Another Item</span>
               </button>
             </div>
 
@@ -756,27 +753,27 @@ export default function DeliveryChallanManager({ session }: DeliveryChallanManag
                 {/* Part Selector Dropdown with CustomSelect */}
                 <div className="space-y-1">
                   <label className="text-[11px] font-medium text-slate-600">
-                    Select from Parts Catalog (Optional)
+                    Select Product (Optional)
                   </label>
                   <CustomSelect
                     value={item.materialId || ''}
                     onChange={(val) => handleMaterialSelect(index, val)}
                     options={[
-                      { value: '', label: '-- Choose registered component or type below --' },
+                      { value: '', label: '-- Choose registered product or type below --' },
                       ...materials.map((m) => ({
                         value: m.id,
                         label: m.productName,
                         sublabel: m.partNumber ? `Part No: ${m.partNumber}` : undefined,
                       })),
                     ]}
-                    placeholder="-- Choose registered component or type below --"
+                    placeholder="-- Choose registered product or type below --"
                   />
                 </div>
 
                 {/* Description */}
                 <div className="space-y-1">
                   <label className="text-[11px] font-medium text-slate-600">
-                    Description of Goods / Part Name *
+                    Item Description *
                   </label>
                   <input
                     type="text"
@@ -802,7 +799,7 @@ export default function DeliveryChallanManager({ session }: DeliveryChallanManag
                   </div>
 
                   <div className="space-y-1">
-                    <label className="text-[11px] font-medium text-slate-600">Unit</label>
+                    <label className="text-[11px] font-medium text-slate-600">Unit *</label>
                     <CustomUnitSelect
                       value={item.uom}
                       onChange={(val) => updateItemField(index, 'uom', val)}
@@ -811,7 +808,7 @@ export default function DeliveryChallanManager({ session }: DeliveryChallanManag
                   </div>
 
                   <div className="space-y-1">
-                    <label className="text-[11px] font-medium text-slate-600">Item Remarks</label>
+                    <label className="text-[11px] font-medium text-slate-600">Remarks</label>
                     <input
                       type="text"
                       value={item.remarks || ''}
@@ -826,7 +823,7 @@ export default function DeliveryChallanManager({ session }: DeliveryChallanManag
 
           {/* Overall Remarks */}
           <div className="space-y-1.5">
-            <label className="text-xs font-semibold text-slate-700">General Remarks / Delivery Notes</label>
+            <label className="text-xs font-semibold text-slate-700">Remarks</label>
             <input
               type="text"
               value={formData.remarks}

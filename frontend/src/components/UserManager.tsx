@@ -227,8 +227,8 @@ export const UserManager: React.FC<UserManagerProps> = ({ session }) => {
   });
 
   const roleOptions = [
-    { value: 'STAFF', label: 'Company Staff / Billing Operator', sublabel: 'Manages DCs, stock, billing, attendance' },
-    { value: 'WORKER', label: 'Shop Floor Worker / CNC Machinist', sublabel: 'Logs daily production, checks attendance & payslips' },
+    { value: 'STAFF', label: 'Billing Staff', sublabel: 'Manages DCs, stock, billing, attendance' },
+    { value: 'WORKER', label: 'Machine Operator', sublabel: 'Logs daily production, checks attendance & payslips' },
     { value: 'ADMIN', label: 'Administrator', sublabel: 'Full authority including settings and user creation' },
   ];
 
@@ -239,19 +239,19 @@ export const UserManager: React.FC<UserManagerProps> = ({ session }) => {
         <div>
           <h2 className="text-base font-semibold text-slate-900 tracking-tight flex items-center gap-2">
             <Users className="w-5 h-5 text-slate-700" />
-            Staff & User Management
+            Users
           </h2>
           <p className="text-xs text-slate-500 font-normal mt-0.5">
-            Admin portal to create and configure accounts for workshop staff, operators, and administrators
+            Admin portal to manage accounts for workshop staff, operators, and administrators
           </p>
         </div>
 
         <button
           onClick={handleOpenCreate}
-          className="flex items-center gap-2 px-4 py-2.5 rounded-xl bg-white border border-slate-300 text-slate-900 text-xs font-semibold hover:bg-slate-50 hover:border-slate-400 active:scale-95 transition-all shadow-2xs whitespace-nowrap self-start sm:self-auto"
+          className="flex items-center gap-2 px-4 py-2.5 rounded-xl bg-white border border-slate-300 text-slate-900 text-xs font-semibold hover:bg-slate-50 hover:border-slate-400 active:scale-95 transition-all shadow-2xs whitespace-nowrap shrink-0"
         >
-          <UserPlus className="w-4 h-4 text-slate-800" />
-          <span>Add New Account</span>
+          <UserPlus className="w-4 h-4 text-slate-800 shrink-0" />
+          <span>Add User</span>
         </button>
       </div>
 
@@ -275,12 +275,12 @@ export const UserManager: React.FC<UserManagerProps> = ({ session }) => {
           />
         </div>
 
-        <div className="flex items-center gap-1.5 overflow-x-auto pb-1 sm:pb-0">
+        <div className="flex items-center gap-1.5 overflow-x-auto max-w-full pb-1 sm:pb-0">
           {(['ALL', 'STAFF', 'WORKER', 'ADMIN'] as const).map((r) => (
             <button
               key={r}
               onClick={() => setRoleFilter(r)}
-              className={`px-3 py-1.5 rounded-lg text-xs font-medium transition-all whitespace-nowrap ${
+              className={`px-3 py-1.5 rounded-lg text-xs font-medium transition-all whitespace-nowrap shrink-0 ${
                 roleFilter === r
                   ? 'bg-slate-900 text-white shadow-2xs'
                   : 'bg-white text-slate-600 border border-slate-200 hover:bg-slate-50'
@@ -293,14 +293,14 @@ export const UserManager: React.FC<UserManagerProps> = ({ session }) => {
       </div>
 
       {/* Users Table */}
-      <div className="border border-slate-200 rounded-2xl bg-white overflow-hidden shadow-2xs">
-        <div className="overflow-x-auto">
-          <table className="w-full text-left text-xs">
+      <div className="border border-slate-200 rounded-2xl bg-white overflow-hidden shadow-2xs w-full max-w-full">
+        <div className="overflow-x-auto w-full max-w-full">
+          <table className="w-full min-w-[700px] text-left text-xs">
             <thead className="bg-slate-50 border-b border-slate-200 text-slate-600 font-semibold tracking-wider uppercase text-[11px]">
               <tr>
-                <th className="py-3 px-4 text-left whitespace-nowrap">USER / FULL NAME</th>
+                <th className="py-3 px-4 text-left whitespace-nowrap">USER NAME</th>
                 <th className="py-3 px-4 text-left whitespace-nowrap">ROLE</th>
-                <th className="py-3 px-4 text-left whitespace-nowrap">STAFF / WORKER DETAILS</th>
+                <th className="py-3 px-4 text-left whitespace-nowrap">USER DETAILS</th>
                 <th className="py-3 px-4 text-left whitespace-nowrap">STATUS</th>
                 <th className="py-3 px-4 text-left whitespace-nowrap">CREATED</th>
                 <th className="py-3 px-4 text-left whitespace-nowrap">ACTIONS</th>
@@ -482,7 +482,7 @@ export const UserManager: React.FC<UserManagerProps> = ({ session }) => {
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
             <div>
               <label className="block text-xs font-semibold text-slate-700 mb-1.5">
-                Username (Login ID) *
+                Username *
               </label>
               <input
                 type="text"
@@ -500,7 +500,7 @@ export const UserManager: React.FC<UserManagerProps> = ({ session }) => {
 
             <div>
               <label className="block text-xs font-semibold text-slate-700 mb-1.5">
-                Full Legal Name *
+                Full Name *
               </label>
               <input
                 type="text"
@@ -566,7 +566,7 @@ export const UserManager: React.FC<UserManagerProps> = ({ session }) => {
 
                 <div>
                   <label className="block text-xs font-medium text-amber-900 mb-1">
-                    Base Salary (₹ / 26-Day Month)
+                    Base Salary (₹)
                   </label>
                   <input
                     type="number"
@@ -580,7 +580,7 @@ export const UserManager: React.FC<UserManagerProps> = ({ session }) => {
 
                 <div>
                   <label className="block text-xs font-medium text-amber-900 mb-1">
-                    Overtime Rate (₹ / Hour)
+                    Overtime Rate (₹)
                   </label>
                   <input
                     type="number"
@@ -594,7 +594,7 @@ export const UserManager: React.FC<UserManagerProps> = ({ session }) => {
 
                 <div>
                   <label className="block text-xs font-medium text-amber-900 mb-1">
-                    Extra Shift Allowance (₹ / Shift)
+                    Extra Shift Allowance (₹)
                   </label>
                   <input
                     type="number"

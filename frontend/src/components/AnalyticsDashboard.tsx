@@ -165,52 +165,52 @@ export default function AnalyticsDashboard({ session, onNavigateTab }: Analytics
           </p>
         </div>
 
-        <div className="flex items-center gap-2">
+        <div className="flex items-center gap-2 flex-wrap sm:flex-nowrap">
           <button
             onClick={handleExportInvoices}
-            className="flex items-center gap-1.5 px-3.5 py-2 rounded-xl bg-white border border-slate-300 text-slate-800 text-xs font-semibold hover:bg-slate-50 hover:border-slate-400 transition-all shadow-2xs whitespace-nowrap"
+            className="flex items-center gap-1.5 px-3 sm:px-3.5 py-2 rounded-xl bg-white border border-slate-300 text-slate-800 text-xs font-semibold hover:bg-slate-50 hover:border-slate-400 transition-all shadow-2xs whitespace-nowrap shrink-0"
             title="Download Invoices CSV Report"
           >
-            <FileSpreadsheet className="w-3.5 h-3.5 text-emerald-600" />
-            <span>Export Invoices</span>
-            <Download className="w-3 h-3 text-slate-400" />
+            <FileSpreadsheet className="w-3.5 h-3.5 text-emerald-600 shrink-0" />
+            <span className="whitespace-nowrap">Export Invoices</span>
+            <Download className="w-3 h-3 text-slate-400 shrink-0" />
           </button>
 
           <button
             onClick={handleExportStock}
-            className="flex items-center gap-1.5 px-3.5 py-2 rounded-xl bg-white border border-slate-300 text-slate-800 text-xs font-semibold hover:bg-slate-50 hover:border-slate-400 transition-all shadow-2xs whitespace-nowrap"
+            className="flex items-center gap-1.5 px-3 sm:px-3.5 py-2 rounded-xl bg-white border border-slate-300 text-slate-800 text-xs font-semibold hover:bg-slate-50 hover:border-slate-400 transition-all shadow-2xs whitespace-nowrap shrink-0"
             title="Download Customer Stock Balances CSV Report"
           >
-            <FileSpreadsheet className="w-3.5 h-3.5 text-slate-700" />
-            <span>Export Stock</span>
-            <Download className="w-3 h-3 text-slate-400" />
+            <FileSpreadsheet className="w-3.5 h-3.5 text-slate-700 shrink-0" />
+            <span className="whitespace-nowrap">Export Stock</span>
+            <Download className="w-3 h-3 text-slate-400 shrink-0" />
           </button>
         </div>
       </div>
 
-      {/* 4 PRIMARY EXECUTIVE KPI CARDS */}
-      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-5">
+      {/* 4 PRIMARY EXECUTIVE KPI CARDS - 2x2 ON MOBILE */}
+      <div className="grid grid-cols-2 lg:grid-cols-4 gap-3 sm:gap-5">
         {/* Metric 1: Total Invoiced */}
         <motion.div
           initial={{ opacity: 0, y: 8 }}
           animate={{ opacity: 1, y: 0 }}
-          className="p-6 rounded-3xl border border-slate-200 bg-white hover:border-slate-300 transition-colors shadow-subtle flex flex-col justify-between"
+          className="p-4 sm:p-6 rounded-2xl sm:rounded-3xl border border-slate-200 bg-white hover:border-slate-300 transition-colors shadow-subtle flex flex-col justify-between"
         >
           <div className="flex items-center justify-between">
-            <span className="text-xs font-medium text-slate-500">Total Billed Invoices</span>
-            <span className="w-8 h-8 rounded-2xl bg-slate-100 flex items-center justify-center text-slate-700">
-              <Receipt className="w-4 h-4" />
+            <span className="text-[11px] sm:text-xs font-medium text-slate-500 truncate">Total Billed Invoices</span>
+            <span className="w-7 h-7 sm:w-8 sm:h-8 rounded-xl sm:rounded-2xl bg-slate-100 flex items-center justify-center text-slate-700 shrink-0">
+              <Receipt className="w-3.5 h-3.5 sm:w-4 sm:h-4" />
             </span>
           </div>
-          <div className="mt-4">
-            <div className="text-2xl font-semibold text-slate-900 tracking-tight">
+          <div className="mt-3 sm:mt-4">
+            <div className="text-lg sm:text-2xl font-semibold text-slate-900 tracking-tight">
               ₹{financials.totalInvoiced.toLocaleString('en-IN', { maximumFractionDigits: 0 })}
             </div>
-            <div className="flex items-center gap-1.5 text-xs text-slate-500 mt-1 font-normal">
-              <span className="inline-flex items-center text-emerald-600 font-medium">
-                <TrendingUp className="w-3.5 h-3.5 mr-0.5" /> SAC 998898
+            <div className="flex items-center gap-1 text-[10px] sm:text-xs text-slate-500 mt-0.5 sm:mt-1 font-normal truncate">
+              <span className="inline-flex items-center text-emerald-600 font-medium shrink-0">
+                <TrendingUp className="w-3 h-3 sm:w-3.5 sm:h-3.5 mr-0.5" /> SAC 998898
               </span>
-              <span>18% GST Apportioned</span>
+              <span className="hidden sm:inline">18% GST Apportioned</span>
             </div>
           </div>
         </motion.div>
@@ -220,20 +220,20 @@ export default function AnalyticsDashboard({ session, onNavigateTab }: Analytics
           initial={{ opacity: 0, y: 8 }}
           animate={{ opacity: 1, y: 0 }}
           transition={{ delay: 0.03 }}
-          className="p-6 rounded-3xl border border-slate-200 bg-white hover:border-slate-300 transition-colors shadow-subtle flex flex-col justify-between"
+          className="p-4 sm:p-6 rounded-2xl sm:rounded-3xl border border-slate-200 bg-white hover:border-slate-300 transition-colors shadow-subtle flex flex-col justify-between"
         >
           <div className="flex items-center justify-between">
-            <span className="text-xs font-medium text-slate-500">Realized Collections</span>
-            <span className="w-8 h-8 rounded-2xl bg-emerald-50 flex items-center justify-center text-emerald-600">
-              <CreditCard className="w-4 h-4" />
+            <span className="text-[11px] sm:text-xs font-medium text-slate-500 truncate">Realized Collections</span>
+            <span className="w-7 h-7 sm:w-8 sm:h-8 rounded-xl sm:rounded-2xl bg-emerald-50 flex items-center justify-center text-emerald-600 shrink-0">
+              <CreditCard className="w-3.5 h-3.5 sm:w-4 sm:h-4" />
             </span>
           </div>
-          <div className="mt-4">
-            <div className="text-2xl font-semibold text-emerald-700 tracking-tight">
+          <div className="mt-3 sm:mt-4">
+            <div className="text-lg sm:text-2xl font-semibold text-emerald-700 tracking-tight">
               ₹{financials.totalCollected.toLocaleString('en-IN', { maximumFractionDigits: 0 })}
             </div>
-            <div className="flex items-center gap-1.5 text-xs text-slate-500 mt-1 font-normal">
-              <span className="text-slate-700 font-medium">
+            <div className="flex items-center gap-1 text-[10px] sm:text-xs text-slate-500 mt-0.5 sm:mt-1 font-normal truncate">
+              <span className="text-slate-700 font-medium truncate">
                 Bank & UPI Remittances
               </span>
             </div>
@@ -245,20 +245,20 @@ export default function AnalyticsDashboard({ session, onNavigateTab }: Analytics
           initial={{ opacity: 0, y: 8 }}
           animate={{ opacity: 1, y: 0 }}
           transition={{ delay: 0.06 }}
-          className="p-6 rounded-3xl border border-slate-200 bg-white hover:border-slate-300 transition-colors shadow-subtle flex flex-col justify-between"
+          className="p-4 sm:p-6 rounded-2xl sm:rounded-3xl border border-slate-200 bg-white hover:border-slate-300 transition-colors shadow-subtle flex flex-col justify-between"
         >
           <div className="flex items-center justify-between">
-            <span className="text-xs font-medium text-slate-500">Outstanding Receivables</span>
-            <span className="w-8 h-8 rounded-2xl bg-amber-50 flex items-center justify-center text-amber-600">
-              <Clock className="w-4 h-4" />
+            <span className="text-[11px] sm:text-xs font-medium text-slate-500 truncate">Outstanding Due</span>
+            <span className="w-7 h-7 sm:w-8 sm:h-8 rounded-xl sm:rounded-2xl bg-amber-50 flex items-center justify-center text-amber-600 shrink-0">
+              <Clock className="w-3.5 h-3.5 sm:w-4 sm:h-4" />
             </span>
           </div>
-          <div className="mt-4">
-            <div className="text-2xl font-semibold text-slate-900 tracking-tight">
+          <div className="mt-3 sm:mt-4">
+            <div className="text-lg sm:text-2xl font-semibold text-slate-900 tracking-tight">
               ₹{financials.outstandingDue.toLocaleString('en-IN', { maximumFractionDigits: 0 })}
             </div>
-            <div className="flex items-center gap-1.5 text-xs text-slate-500 mt-1 font-normal">
-              <span className="text-amber-700 bg-amber-50 px-2 py-0.5 rounded-full text-[11px] font-medium border border-amber-200">
+            <div className="flex items-center gap-1 text-[10px] sm:text-xs text-slate-500 mt-0.5 sm:mt-1 font-normal truncate">
+              <span className="text-amber-700 bg-amber-50 px-1.5 sm:px-2 py-0.5 rounded-full text-[10px] sm:text-[11px] font-medium border border-amber-200 truncate">
                 {financials.unpaidInvoicesCount} Invoices Due
               </span>
             </div>
@@ -270,20 +270,20 @@ export default function AnalyticsDashboard({ session, onNavigateTab }: Analytics
           initial={{ opacity: 0, y: 8 }}
           animate={{ opacity: 1, y: 0 }}
           transition={{ delay: 0.09 }}
-          className="p-6 rounded-3xl border border-slate-200 bg-white hover:border-slate-300 transition-colors shadow-subtle flex flex-col justify-between"
+          className="p-4 sm:p-6 rounded-2xl sm:rounded-3xl border border-slate-200 bg-white hover:border-slate-300 transition-colors shadow-subtle flex flex-col justify-between"
         >
           <div className="flex items-center justify-between">
-            <span className="text-xs font-medium text-slate-500">Total Workshop Outflow</span>
-            <span className="w-8 h-8 rounded-2xl bg-slate-100 flex items-center justify-center text-slate-700">
-              <ShoppingBag className="w-4 h-4" />
+            <span className="text-[11px] sm:text-xs font-medium text-slate-500 truncate">Workshop Outflow</span>
+            <span className="w-7 h-7 sm:w-8 sm:h-8 rounded-xl sm:rounded-2xl bg-slate-100 flex items-center justify-center text-slate-700 shrink-0">
+              <ShoppingBag className="w-3.5 h-3.5 sm:w-4 sm:h-4" />
             </span>
           </div>
-          <div className="mt-4">
-            <div className="text-2xl font-semibold text-slate-900 tracking-tight">
+          <div className="mt-3 sm:mt-4">
+            <div className="text-lg sm:text-2xl font-semibold text-slate-900 tracking-tight">
               ₹{financials.totalOutflow.toLocaleString('en-IN', { maximumFractionDigits: 0 })}
             </div>
-            <div className="flex items-center gap-1.5 text-xs text-slate-500 mt-1 font-normal">
-              <span className="text-slate-600">
+            <div className="flex items-center gap-1 text-[10px] sm:text-xs text-slate-500 mt-0.5 sm:mt-1 font-normal truncate">
+              <span className="text-slate-600 truncate">
                 Tooling + Utilities + Payroll
               </span>
             </div>

@@ -265,6 +265,7 @@ model WorkerProfile {
   createdAt      DateTime          @default(now())
 
   attendance     Attendance[]
+  dailyAttendance DailyAttendance[]
   overtime       OvertimeEntry[]
   extraShifts    ExtraShiftEntry[]
   dailyWork      WorkerDailyWork[]
@@ -284,6 +285,21 @@ model Attendance {
   status         ApprovalStatus    @default(PENDING)
   approvedBy     String?
   createdAt      DateTime          @default(now())
+}
+
+model DailyAttendance {
+  id             String            @id @default(uuid())
+  workerId       String
+  worker         WorkerProfile     @relation(fields: [workerId], references: [id], onDelete: Cascade)
+  date           DateTime          @default(now())
+  status         String            @default("PRESENT") // PRESENT, HALF_DAY, ON_LEAVE
+  approvalStatus ApprovalStatus    @default(PENDING)   // PENDING, APPROVED, REJECTED
+  remarks        String?
+  approvedBy     String?
+  createdAt      DateTime          @default(now())
+  updatedAt      DateTime          @updatedAt
+
+  @@unique([workerId, date])
 }
 
 model OvertimeEntry {

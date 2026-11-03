@@ -13,13 +13,52 @@ import {
   X,
   AlertCircle,
   IndianRupee,
-  TrendingUp
+  TrendingUp,
+  Calendar,
+  UserCheck
 } from 'lucide-react';
 import { UserSession } from '../types';
 import PayslipPrintView, { PayslipData } from './PayslipPrintView';
 import SlideOverDrawer from './common/SlideOverDrawer';
 import CustomSelect from './common/CustomSelect';
 import CustomDatePicker from './common/CustomDatePicker';
+
+interface MonthlyAttendanceItem {
+  id: string;
+  workerId: string;
+  monthYear: string;
+  standardDays: number;
+  presentDays: number;
+  absentDays: number;
+  paidLeaves: number;
+  unpaidLeaves: number;
+  status: string;
+  approvedBy?: string | null;
+  worker: {
+    id: string;
+    employeeId: string;
+    monthlySalary: string | number;
+    user: {
+      fullName: string;
+    };
+  };
+}
+
+interface DailyAttendanceItem {
+  id: string;
+  workerId: string;
+  date: string;
+  status: string;
+  approvalStatus: 'PENDING' | 'APPROVED' | 'REJECTED';
+  remarks?: string | null;
+  approvedBy?: string | null;
+  worker: {
+    employeeId: string;
+    user: {
+      fullName: string;
+    };
+  };
+}
 
 interface SalaryRecordItem {
   id: string;
@@ -93,9 +132,11 @@ interface SalaryManagerProps {
 }
 
 export default function SalaryManager({ session }: SalaryManagerProps) {
-  const [activeTab, setActiveTab] = useState<'payroll' | 'overtime' | 'shifts'>('payroll');
-  const [monthYear, setMonthYear] = useState('10-2026');
+  const [activeTab, setActiveTab] = useState<'attendance' | 'payroll' | 'overtime' | 'shifts'>('attendance');
+  const [monthYear, setMonthYear] = useState('11-2026');
   const [records, setRecords] = useState<SalaryRecordItem[]>([]);
+  const [monthlyAttendance, setMonthlyAttendance] = useState<MonthlyAttendanceItem[]>([]);
+  const [dailyAttendance, setDailyAttendance] = useState<DailyAttendanceItem[]>([]);
   const [otEntries, setOtEntries] = useState<OvertimeItem[]>([]);
   const [shiftEntries, setShiftEntries] = useState<ExtraShiftItem[]>([]);
   const [workers, setWorkers] = useState<WorkerOption[]>([]);
@@ -209,7 +250,7 @@ export default function SalaryManager({ session }: SalaryManagerProps) {
   const fetchData = async () => {
     try {
       setLoading(true);
-      const [salRes, otRes, shiftRes, workerRes] = await Promise.all([
+      const [salRes, otRes, shiftRes, workerRes, attMonthlyRes, attDailyRes] = await Promise.all([
         fetch(`${API_BASE_URL}/api/salary/records?monthYear=${monthYear}`, {
           headers: { Authorization: `Bearer ${session.token}` },
         }),
@@ -220,6 +261,12 @@ export default function SalaryManager({ session }: SalaryManagerProps) {
           headers: { Authorization: `Bearer ${session.token}` },
         }),
         fetch(`${API_BASE_URL}/api/worker/profiles`, {
+          headers: { Authorization: `Bearer ${session.token}` },
+        }),
+        fetch(`${API_BASE_URL}/api/salary/attendance?monthYear=${monthYear}`, {
+          headers: { Authorization: `Bearer ${session.token}` },
+        }),
+        fetch(`${API_BASE_URL}/api/worker/attendance?month=${monthYear}`, {
           headers: { Authorization: `Bearer ${session.token}` },
         }),
       ]);
@@ -243,8 +290,61 @@ export default function SalaryManager({ session }: SalaryManagerProps) {
         const data = await workerRes.json();
         setWorkers(data.workers || []);
       }
+      if (attMonthlyRes.ok) {
+        const data = await attMonthlyRes.json();
+        setMonthlyAttendance(data.records || []);
+      }
+      if (attDailyRes.ok) {
+        const data = await attDailyRes.json();
+        setDailyAttendance(data.attendance || []);
+      }
     } catch (err) {
       console.error('Failed to load salary data:', err);
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const handleApproveDailyAttendance = async (id: string) => {
+    try {
+      setLoading(true);
+      const res = await fetch(`${API_BASE_URL}/api/approvals/attendance/${id}/approve`, {
+        method: 'POST',
+        headers: { Authorization: `Bearer ${session.token}` },
+      });
+      const data = await res.json();
+      if (!res.ok) throw new Error(data.error || 'Failed to approve attendance');
+      setNotification({
+        type: 'success',
+        message: 'Daily attendance approved! Monthly 26-day register updated automatically.',
+      });
+      fetchData();
+    } catch (err: any) {
+      setNotification({ type: 'error', message: err.message || 'Approval failed' });
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const handleRejectDailyAttendance = async (id: string) => {
+    const reason = prompt('Please enter rejection reason:');
+    if (reason === null) return;
+    try {
+      setLoading(true);
+      const res = await fetch(`${API_BASE_URL}/api/approvals/attendance/${id}/reject`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          Authorization: `Bearer ${session.token}`,
+        },
+        body: JSON.stringify({ reason: reason || 'Rejected by admin' }),
+      });
+      const data = await res.json();
+      if (!res.ok) throw new Error(data.error || 'Failed to reject attendance');
+      setNotification({ type: 'success', message: 'Daily attendance rejected' });
+      fetchData();
+    } catch (err: any) {
+      setNotification({ type: 'error', message: err.message || 'Rejection failed' });
     } finally {
       setLoading(false);
     }
@@ -679,72 +779,72 @@ export default function SalaryManager({ session }: SalaryManagerProps) {
       </AnimatePresence>
 
       {/* KPI Cards */}
-      <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
-        <div className="p-5 rounded-2xl bg-white border border-slate-200/80 shadow-card">
+      <div className="grid grid-cols-2 lg:grid-cols-4 gap-3 sm:gap-4">
+        <div className="p-3.5 sm:p-5 rounded-2xl bg-white border border-slate-200/80 shadow-card">
           <div className="flex items-center justify-between">
-            <span className="text-xs font-medium text-slate-500 uppercase tracking-wider">
-              Total Net Payroll
+            <span className="text-[10px] sm:text-xs font-medium text-slate-500 uppercase tracking-wider truncate">
+              Total Salary Payout
             </span>
-            <div className="w-9 h-9 rounded-xl bg-white border border-slate-300 text-slate-900 flex items-center justify-center">
+            <div className="w-8 h-8 sm:w-9 sm:h-9 rounded-xl bg-white border border-slate-300 text-slate-900 flex items-center justify-center shrink-0">
               <IndianRupee className="w-4 h-4" />
             </div>
           </div>
-          <div className="mt-3">
-            <span className="text-2xl font-semibold text-slate-900 tracking-tight">
+          <div className="mt-2 sm:mt-3">
+            <span className="text-lg sm:text-2xl font-semibold text-slate-900 tracking-tight">
               ₹{summary.totalPayout.toLocaleString('en-IN', { maximumFractionDigits: 0 })}
             </span>
-            <span className="text-xs text-slate-500 ml-2">26-day basis</span>
+            <span className="text-[10px] sm:text-xs text-slate-500 ml-1.5 sm:ml-2">26-day basis</span>
           </div>
         </div>
 
-        <div className="p-5 rounded-2xl bg-white border border-slate-200/80 shadow-card">
+        <div className="p-3.5 sm:p-5 rounded-2xl bg-white border border-slate-200/80 shadow-card">
           <div className="flex items-center justify-between">
-            <span className="text-xs font-medium text-slate-500 uppercase tracking-wider">
-              Approved Overtime (OT)
+            <span className="text-[10px] sm:text-xs font-medium text-slate-500 uppercase tracking-wider truncate">
+              Approved Overtime
             </span>
-            <div className="w-9 h-9 rounded-xl bg-emerald-50 flex items-center justify-center text-emerald-600">
+            <div className="w-8 h-8 sm:w-9 sm:h-9 rounded-xl bg-emerald-50 flex items-center justify-center text-emerald-600 shrink-0">
               <TrendingUp className="w-4 h-4" />
             </div>
           </div>
-          <div className="mt-3">
-            <span className="text-2xl font-semibold text-slate-900 tracking-tight">
+          <div className="mt-2 sm:mt-3">
+            <span className="text-lg sm:text-2xl font-semibold text-slate-900 tracking-tight">
               ₹{totalOtPayout.toLocaleString('en-IN', { maximumFractionDigits: 0 })}
             </span>
-            <span className="text-xs text-emerald-700 font-medium ml-2">approved pay</span>
+            <span className="text-[10px] sm:text-xs text-emerald-700 font-medium ml-1.5 sm:ml-2">approved</span>
           </div>
         </div>
 
-        <div className="p-5 rounded-2xl bg-white border border-slate-200/80 shadow-card">
+        <div className="p-3.5 sm:p-5 rounded-2xl bg-white border border-slate-200/80 shadow-card">
           <div className="flex items-center justify-between">
-            <span className="text-xs font-medium text-slate-500 uppercase tracking-wider">
+            <span className="text-[10px] sm:text-xs font-medium text-slate-500 uppercase tracking-wider truncate">
               Extra Shifts Allowance
             </span>
-            <div className="w-9 h-9 rounded-xl bg-slate-100 flex items-center justify-center text-slate-800">
+            <div className="w-8 h-8 sm:w-9 sm:h-9 rounded-xl bg-slate-100 flex items-center justify-center text-slate-800 shrink-0">
               <Clock className="w-4 h-4" />
             </div>
           </div>
-          <div className="mt-3">
-            <span className="text-2xl font-semibold text-slate-900 tracking-tight">
+          <div className="mt-2 sm:mt-3">
+            <span className="text-lg sm:text-2xl font-semibold text-slate-900 tracking-tight">
               ₹{totalShiftPayout.toLocaleString('en-IN', { maximumFractionDigits: 0 })}
             </span>
-            <span className="text-xs text-slate-500 ml-2">night & special</span>
+            <span className="text-[10px] sm:text-xs text-slate-500 ml-1.5 sm:ml-2">night & special</span>
           </div>
         </div>
 
-        <div className="p-5 rounded-2xl bg-white border border-slate-200/80 shadow-card">
+        <div className="p-3.5 sm:p-5 rounded-2xl bg-white border border-slate-200/80 shadow-card">
           <div className="flex items-center justify-between">
-            <span className="text-xs font-medium text-slate-500 uppercase tracking-wider">
+            <span className="text-[10px] sm:text-xs font-medium text-slate-500 uppercase tracking-wider truncate">
               Absence Deductions
             </span>
-            <div className="w-9 h-9 rounded-xl bg-rose-50 flex items-center justify-center text-rose-600">
+            <div className="w-8 h-8 sm:w-9 sm:h-9 rounded-xl bg-rose-50 flex items-center justify-center text-rose-600 shrink-0">
               <XCircle className="w-4 h-4" />
             </div>
           </div>
-          <div className="mt-3">
-            <span className="text-2xl font-semibold text-slate-900 tracking-tight">
+          <div className="mt-2 sm:mt-3">
+            <span className="text-lg sm:text-2xl font-semibold text-slate-900 tracking-tight">
               -₹{totalAbsenceDeductions.toLocaleString('en-IN', { maximumFractionDigits: 0 })}
             </span>
-            <span className="text-xs text-rose-700 font-medium ml-2">unpaid leave</span>
+            <span className="text-[10px] sm:text-xs text-rose-700 font-medium ml-1.5 sm:ml-2">unpaid leave</span>
           </div>
         </div>
       </div>
@@ -752,35 +852,45 @@ export default function SalaryManager({ session }: SalaryManagerProps) {
       {/* Sub-Tabs Switcher & Controls */}
       <div className="flex flex-col md:flex-row items-stretch md:items-center justify-between gap-4">
         {/* Module Switcher Tabs */}
-        <div className="flex items-center gap-2 p-1 rounded-2xl bg-slate-100 border border-slate-200/80">
+        <div className="flex items-center gap-2 p-1 rounded-2xl bg-slate-100 border border-slate-200/80 overflow-x-auto max-w-full">
           <button
-            onClick={() => setActiveTab('payroll')}
-            className={`flex items-center gap-2 px-4 py-2 rounded-xl text-xs font-medium transition-all ${activeTab === 'payroll'
+            onClick={() => setActiveTab('attendance')}
+            className={`flex items-center gap-2 px-4 py-2 rounded-xl text-xs font-medium transition-all shrink-0 ${activeTab === 'attendance'
                 ? 'bg-white text-slate-950 shadow-sm'
                 : 'text-slate-600 hover:text-slate-950'
               } whitespace-nowrap`}
           >
-            <IndianRupee className="w-3.5 h-3.5" />
-            <span>Monthly 26-Day Payroll</span>
+            <Calendar className="w-3.5 h-3.5 shrink-0" />
+            <span>Attendance</span>
+          </button>
+          <button
+            onClick={() => setActiveTab('payroll')}
+            className={`flex items-center gap-2 px-4 py-2 rounded-xl text-xs font-medium transition-all shrink-0 ${activeTab === 'payroll'
+                ? 'bg-white text-slate-950 shadow-sm'
+                : 'text-slate-600 hover:text-slate-950'
+              } whitespace-nowrap`}
+          >
+            <IndianRupee className="w-3.5 h-3.5 shrink-0" />
+            <span>Salary Calculation</span>
           </button>
           <button
             onClick={() => setActiveTab('overtime')}
-            className={`flex items-center gap-2 px-4 py-2 rounded-xl text-xs font-medium transition-all ${activeTab === 'overtime'
+            className={`flex items-center gap-2 px-4 py-2 rounded-xl text-xs font-medium transition-all shrink-0 ${activeTab === 'overtime'
                 ? 'bg-white text-slate-950 shadow-sm'
                 : 'text-slate-600 hover:text-slate-950'
               } whitespace-nowrap`}
           >
-            <Clock className="w-3.5 h-3.5" />
-            <span>Overtime (OT) Log</span>
+            <Clock className="w-3.5 h-3.5 shrink-0" />
+            <span>Overtime</span>
           </button>
           <button
             onClick={() => setActiveTab('shifts')}
-            className={`flex items-center gap-2 px-4 py-2 rounded-xl text-xs font-medium transition-all ${activeTab === 'shifts'
+            className={`flex items-center gap-2 px-4 py-2 rounded-xl text-xs font-medium transition-all shrink-0 ${activeTab === 'shifts'
                 ? 'bg-white text-slate-950 shadow-sm'
                 : 'text-slate-600 hover:text-slate-950'
               } whitespace-nowrap`}
           >
-            <RefreshCw className="w-3.5 h-3.5" />
+            <RefreshCw className="w-3.5 h-3.5 shrink-0" />
             <span>Extra Shifts</span>
           </button>
         </div>
@@ -793,35 +903,35 @@ export default function SalaryManager({ session }: SalaryManagerProps) {
               value={monthYear}
               onChange={setMonthYear}
               options={[
+                { value: '11-2026', label: 'Cycle: November 2026' },
                 { value: '10-2026', label: 'Cycle: October 2026' },
                 { value: '09-2026', label: 'Cycle: September 2026' },
                 { value: '08-2026', label: 'Cycle: August 2026' },
-                { value: '11-2026', label: 'Cycle: November 2026' },
+                { value: '12-2026', label: 'Cycle: December 2026' },
               ]}
             />
           </div>
 
-          {activeTab === 'payroll' ? (
-            <>
-              <button
-                onClick={() => {
-                  setFormError(null);
-                  setAttendanceModal(true);
-                }}
-                className="flex items-center gap-1.5 px-3.5 py-2 rounded-2xl bg-white border border-slate-200 text-slate-700 text-xs font-medium hover:bg-slate-50 shadow-sm whitespace-nowrap"
-              >
-                <Plus className="w-3.5 h-3.5" />
-                <span>Log Attendance</span>
-              </button>
-              <button
-                onClick={handleGenerateSalaries}
-                disabled={loading}
-                className="flex items-center gap-1.5 px-4 py-2 rounded-2xl bg-white border border-slate-300 text-slate-900 text-xs font-semibold hover:bg-slate-50 hover:border-slate-400 disabled:opacity-50 transition-all shadow-2xs whitespace-nowrap"
-              >
-                <RefreshCw className={`w-3.5 h-3.5 ${loading ? 'animate-spin' : ''}`} />
-                <span>⚡ Calculate All Payslips</span>
-              </button>
-            </>
+          {activeTab === 'attendance' ? (
+            <button
+              onClick={() => {
+                setFormError(null);
+                setAttendanceModal(true);
+              }}
+              className="flex items-center gap-2 px-4 py-2 rounded-2xl bg-white border border-slate-300 text-slate-900 text-xs font-semibold hover:bg-slate-50 hover:border-slate-400 transition-all shadow-2xs whitespace-nowrap"
+            >
+              <Plus className="w-4 h-4" />
+              <span>Log / Adjust Attendance</span>
+            </button>
+          ) : activeTab === 'payroll' ? (
+            <button
+              onClick={handleGenerateSalaries}
+              disabled={loading}
+              className="flex items-center gap-1.5 px-4 py-2 rounded-2xl bg-white border border-slate-300 text-slate-900 text-xs font-semibold hover:bg-slate-50 hover:border-slate-400 disabled:opacity-50 transition-all shadow-2xs whitespace-nowrap"
+            >
+              <RefreshCw className={`w-3.5 h-3.5 ${loading ? 'animate-spin' : ''}`} />
+              <span>Calculate Salaries</span>
+            </button>
           ) : activeTab === 'overtime' ? (
             <button
               onClick={openAddOt}
@@ -842,8 +952,226 @@ export default function SalaryManager({ session }: SalaryManagerProps) {
         </div>
       </div>
 
-      {/* Sub-View 1: 26-Day Payroll Table */}
-      {activeTab === 'payroll' ? (
+      {/* Sub-View 0: Attendance Register & Daily Submissions */}
+      {activeTab === 'attendance' ? (
+        <div className="space-y-6">
+          {/* Card A: Worker Live Daily Submissions */}
+          <div className="bg-white border border-slate-200/80 rounded-3xl shadow-card overflow-hidden">
+            <div className="p-5 border-b border-slate-100 flex flex-col sm:flex-row sm:items-center justify-between gap-3 bg-slate-50/50">
+              <div>
+                <h3 className="text-sm font-semibold text-slate-900 flex items-center gap-2">
+                  <UserCheck className="w-4 h-4 text-emerald-600" />
+                  Worker Daily Attendance Submissions
+                </h3>
+                <p className="text-xs text-slate-500 mt-0.5">
+                  Submissions clocked by workers from portal. Approving automatically updates the monthly 26-day attendance below.
+                </p>
+              </div>
+              <span className="text-xs font-medium text-slate-500 bg-white border border-slate-200 px-3 py-1 rounded-full self-start sm:self-auto">
+                {dailyAttendance.filter(d => d.approvalStatus === 'PENDING').length} Pending Approval
+              </span>
+            </div>
+
+            <div className="overflow-x-auto">
+              <table className="w-full text-left text-xs text-slate-700">
+                <thead className="bg-slate-50/75 border-b border-slate-200/80 text-[11px] font-semibold text-slate-500 uppercase tracking-wider">
+                  <tr>
+                    <th className="py-3 px-4 text-left whitespace-nowrap">Date</th>
+                    <th className="py-3 px-4 text-left whitespace-nowrap">Worker Name</th>
+                    <th className="py-3 px-4 text-left whitespace-nowrap">Employee ID</th>
+                    <th className="py-3 px-4 text-left whitespace-nowrap">Attendance Status</th>
+                    <th className="py-3 px-4 text-left whitespace-nowrap">Worker Note / Reason</th>
+                    <th className="py-3 px-4 text-left whitespace-nowrap">Approval Status</th>
+                    <th className="py-3 px-4 text-left whitespace-nowrap">Actions</th>
+                  </tr>
+                </thead>
+                <tbody className="divide-y divide-slate-100">
+                  {loading ? (
+                    <tr>
+                      <td colSpan={7} className="py-10 text-center text-slate-400">Loading attendance submissions...</td>
+                    </tr>
+                  ) : dailyAttendance.length === 0 ? (
+                    <tr>
+                      <td colSpan={7} className="py-10 text-center text-slate-400">
+                        No daily attendance entries submitted for this period yet. Workers can clock in daily from their Worker Portal.
+                      </td>
+                    </tr>
+                  ) : (
+                    dailyAttendance.map((d) => (
+                      <tr key={d.id} className="hover:bg-slate-50/60 transition-colors">
+                        <td className="py-3 px-4 font-medium text-slate-900 whitespace-nowrap">
+                          {new Date(d.date).toLocaleDateString('en-IN', { day: '2-digit', month: 'short', year: 'numeric' })}
+                        </td>
+                        <td className="py-3 px-4 font-semibold text-slate-900 whitespace-nowrap">
+                          {d.worker?.user?.fullName || 'Worker'}
+                        </td>
+                        <td className="py-3 px-4 font-mono text-slate-500 whitespace-nowrap">
+                          {d.worker?.employeeId || '—'}
+                        </td>
+                        <td className="py-3 px-4 whitespace-nowrap">
+                          <span
+                            className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-[11px] font-medium border ${
+                              d.status === 'PRESENT'
+                                ? 'bg-emerald-50 text-emerald-700 border-emerald-200'
+                                : d.status === 'HALF_DAY'
+                                ? 'bg-amber-50 text-amber-700 border-amber-200'
+                                : 'bg-rose-50 text-rose-700 border-rose-200'
+                            }`}
+                          >
+                            {d.status === 'PRESENT' ? 'Full Day Present' : d.status === 'HALF_DAY' ? 'Half Day' : 'On Leave'}
+                          </span>
+                        </td>
+                        <td className="py-3 px-4 text-slate-600 max-w-xs truncate">
+                          {d.remarks || '—'}
+                        </td>
+                        <td className="py-3 px-4 whitespace-nowrap">
+                          <span
+                            className={`inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full text-[10px] font-medium border ${
+                              d.approvalStatus === 'APPROVED'
+                                ? 'bg-emerald-50 text-emerald-700 border-emerald-200'
+                                : d.approvalStatus === 'PENDING'
+                                ? 'bg-amber-50 text-amber-700 border-amber-200'
+                                : 'bg-rose-50 text-rose-700 border-rose-200'
+                            }`}
+                          >
+                            {d.approvalStatus === 'APPROVED' && <CheckCircle2 className="w-3 h-3 text-emerald-600" />}
+                            {d.approvalStatus === 'PENDING' && <Clock className="w-3 h-3 text-amber-600" />}
+                            {d.approvalStatus === 'APPROVED'
+                              ? `Approved (${d.approvedBy || 'Admin'})`
+                              : d.approvalStatus === 'PENDING'
+                              ? 'Pending Admin'
+                              : 'Rejected'}
+                          </span>
+                        </td>
+                        <td className="py-3 px-4 whitespace-nowrap">
+                          {d.approvalStatus === 'PENDING' ? (
+                            <div className="flex items-center gap-1.5">
+                              <button
+                                onClick={() => handleApproveDailyAttendance(d.id)}
+                                className="px-2.5 py-1 rounded-lg bg-emerald-600 hover:bg-emerald-700 text-white text-[10px] font-semibold transition-colors"
+                              >
+                                Approve
+                              </button>
+                              <button
+                                onClick={() => handleRejectDailyAttendance(d.id)}
+                                className="px-2.5 py-1 rounded-lg bg-white border border-slate-200 text-rose-600 hover:bg-rose-50 text-[10px] font-semibold transition-colors"
+                              >
+                                Reject
+                              </button>
+                            </div>
+                          ) : (
+                            <span className="text-slate-400 text-[11px]">—</span>
+                          )}
+                        </td>
+                      </tr>
+                    ))
+                  )}
+                </tbody>
+              </table>
+            </div>
+          </div>
+
+          {/* Card B: Monthly 26-Day Attendance Register */}
+          <div className="bg-white border border-slate-200/80 rounded-3xl shadow-card overflow-hidden">
+            <div className="p-5 border-b border-slate-100 flex flex-col sm:flex-row sm:items-center justify-between gap-3 bg-slate-50/50">
+              <div>
+                <h3 className="text-sm font-semibold text-slate-900 flex items-center gap-2">
+                  <Calendar className="w-4 h-4 text-slate-700" />
+                  Monthly Attendance Register (26-Day Standard)
+                </h3>
+                <p className="text-xs text-slate-500 mt-0.5">
+                  Monthly working days calculation feeding directly into salary calculations.
+                </p>
+              </div>
+              <button
+                onClick={() => {
+                  setFormError(null);
+                  setAttendanceModal(true);
+                }}
+                className="flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-white border border-slate-200 text-slate-700 text-xs font-medium hover:bg-slate-50 shadow-2xs self-start sm:self-auto"
+              >
+                <Plus className="w-3.5 h-3.5" />
+                <span>Adjust Attendance</span>
+              </button>
+            </div>
+
+            <div className="overflow-x-auto">
+              <table className="w-full text-left text-xs text-slate-700">
+                <thead className="bg-slate-50/75 border-b border-slate-200/80 text-[11px] font-semibold text-slate-500 uppercase tracking-wider">
+                  <tr>
+                    <th className="py-3 px-4 text-left whitespace-nowrap">Worker Name</th>
+                    <th className="py-3 px-4 text-left whitespace-nowrap">Employee ID</th>
+                    <th className="py-3 px-4 text-left whitespace-nowrap">Monthly Base</th>
+                    <th className="py-3 px-4 text-left whitespace-nowrap">Standard Days</th>
+                    <th className="py-3 px-4 text-left whitespace-nowrap">Present Days</th>
+                    <th className="py-3 px-4 text-left whitespace-nowrap">Absent Days</th>
+                    <th className="py-3 px-4 text-left whitespace-nowrap">Deduction (₹)</th>
+                    <th className="py-3 px-4 text-left whitespace-nowrap">Status</th>
+                    <th className="py-3 px-4 text-left whitespace-nowrap">Action</th>
+                  </tr>
+                </thead>
+                <tbody className="divide-y divide-slate-100">
+                  {monthlyAttendance.length === 0 ? (
+                    <tr>
+                      <td colSpan={9} className="py-10 text-center text-slate-400">
+                        No monthly attendance logs found for {monthYear}. Click "+ Adjust Attendance" or approve daily clock-ins above.
+                      </td>
+                    </tr>
+                  ) : (
+                    monthlyAttendance.map((m) => {
+                      const dailyRate = Number(m.worker.monthlySalary) / (m.standardDays || 26);
+                      const estDeduction = Number(m.absentDays) * dailyRate;
+                      return (
+                        <tr key={m.id} className="hover:bg-slate-50/60 transition-colors">
+                          <td className="py-3 px-4 font-semibold text-slate-900 whitespace-nowrap">
+                            {m.worker.user.fullName}
+                          </td>
+                          <td className="py-3 px-4 font-mono text-slate-500 whitespace-nowrap">
+                            {m.worker.employeeId}
+                          </td>
+                          <td className="py-3 px-4 text-slate-700 whitespace-nowrap font-medium">
+                            ₹{Number(m.worker.monthlySalary).toLocaleString('en-IN')}
+                          </td>
+                          <td className="py-3 px-4 text-slate-600 whitespace-nowrap">
+                            {m.standardDays} Days
+                          </td>
+                          <td className="py-3 px-4 font-semibold text-emerald-700 whitespace-nowrap">
+                            {m.presentDays} Days
+                          </td>
+                          <td className="py-3 px-4 font-semibold text-rose-600 whitespace-nowrap">
+                            {m.absentDays} Days
+                          </td>
+                          <td className="py-3 px-4 font-semibold text-rose-700 whitespace-nowrap">
+                            {estDeduction > 0 ? `-₹${estDeduction.toFixed(0)}` : '₹0'}
+                          </td>
+                          <td className="py-3 px-4 whitespace-nowrap">
+                            <span className="inline-flex px-2 py-0.5 rounded-full text-[10px] font-medium bg-emerald-50 text-emerald-700 border border-emerald-200">
+                              Synced
+                            </span>
+                          </td>
+                          <td className="py-3 px-4 whitespace-nowrap">
+                            <button
+                              onClick={() => {
+                                setAttWorkerId(m.workerId);
+                                setAttPresent(m.presentDays);
+                                setAttAbsent(m.absentDays);
+                                setAttendanceModal(true);
+                              }}
+                              className="px-2.5 py-1 rounded-lg text-slate-600 hover:text-slate-900 hover:bg-slate-100 text-[11px] font-medium transition-colors"
+                            >
+                              Edit
+                            </button>
+                          </td>
+                        </tr>
+                      );
+                    })
+                  )}
+                </tbody>
+              </table>
+            </div>
+          </div>
+        </div>
+      ) : activeTab === 'payroll' ? (
         <div className="bg-white border border-slate-200/80 rounded-3xl shadow-card overflow-hidden">
           <div className="overflow-x-auto">
             <table className="w-full text-left text-xs text-slate-700">
@@ -1199,12 +1527,12 @@ export default function SalaryManager({ session }: SalaryManagerProps) {
 
           <div>
             <label className="block text-[11px] font-semibold text-slate-700 mb-1.5 uppercase tracking-wider">
-              Select Operator *
+              Worker Name *
             </label>
             <CustomSelect
               value={attWorkerId}
               onChange={setAttWorkerId}
-              placeholder="-- Select Operator --"
+              placeholder="-- Select Worker --"
               options={workers.map(w => ({
                 value: w.id,
                 label: `${w.user.fullName} (${w.employeeId})`
@@ -1215,7 +1543,7 @@ export default function SalaryManager({ session }: SalaryManagerProps) {
           <div className="grid grid-cols-2 gap-3">
             <div>
               <label className="block text-[11px] font-semibold text-slate-700 mb-1.5 uppercase tracking-wider">
-                Present Days (Max 26) *
+                Present Days *
               </label>
               <input
                 type="number"
@@ -1235,7 +1563,7 @@ export default function SalaryManager({ session }: SalaryManagerProps) {
 
             <div>
               <label className="block text-[11px] font-semibold text-slate-700 mb-1.5 uppercase tracking-wider">
-                Absent Days (Deducted) *
+                Absent Days *
               </label>
               <input
                 type="number"
@@ -1256,7 +1584,7 @@ export default function SalaryManager({ session }: SalaryManagerProps) {
       <SlideOverDrawer
         isOpen={otModal}
         onClose={() => setOtModal(false)}
-        title={editingOt ? 'Edit Overtime (OT)' : 'Log Overtime (OT)'}
+        title={editingOt ? 'Edit Overtime' : 'Add Overtime'}
         subtitle={editingOt ? 'Update overtime hours and rate' : 'Optional extra hours with admin approval'}
         badge="Overtime"
         widthClass="sm:max-w-xl"
@@ -1275,7 +1603,7 @@ export default function SalaryManager({ session }: SalaryManagerProps) {
               disabled={loading}
               className="flex-1 px-5 py-2.5 rounded-2xl bg-white border border-slate-300 text-slate-900 text-xs font-semibold hover:bg-slate-50 hover:border-slate-400 disabled:opacity-50 transition-all shadow-2xs whitespace-nowrap"
             >
-              {loading ? 'Saving...' : editingOt ? 'Save Changes' : 'Log Overtime'}
+              {loading ? 'Saving...' : editingOt ? 'Save Changes' : 'Record Overtime'}
             </button>
           </div>
         }
@@ -1289,12 +1617,12 @@ export default function SalaryManager({ session }: SalaryManagerProps) {
 
           <div>
             <label className="block text-[11px] font-semibold text-slate-700 mb-1.5 uppercase tracking-wider">
-              Select Operator *
+              Worker Name *
             </label>
             <CustomSelect
               value={otWorkerId}
               onChange={setOtWorkerId}
-              placeholder="-- Select Operator --"
+              placeholder="-- Select Worker --"
               options={
                 editingOt && editingOt.worker && !workers.some(w => w.id === (editingOt.worker.id || editingOt.workerId))
                   ? [
@@ -1318,7 +1646,7 @@ export default function SalaryManager({ session }: SalaryManagerProps) {
           <div className="grid grid-cols-3 gap-3">
             <div>
               <label className="block text-[11px] font-semibold text-slate-700 mb-1.5 uppercase tracking-wider">
-                OT Date *
+                Overtime Date *
               </label>
               <CustomDatePicker
                 value={otDate}
@@ -1329,7 +1657,7 @@ export default function SalaryManager({ session }: SalaryManagerProps) {
 
             <div>
               <label className="block text-[11px] font-semibold text-slate-700 mb-1.5 uppercase tracking-wider">
-                OT Hours *
+                Overtime Hours *
               </label>
               <input
                 type="number"
@@ -1344,7 +1672,7 @@ export default function SalaryManager({ session }: SalaryManagerProps) {
 
             <div>
               <label className="block text-[11px] font-semibold text-slate-700 mb-1.5 uppercase tracking-wider">
-                Rate / Hr (₹)
+                Hourly Rate (₹)
               </label>
               <input
                 type="number"
@@ -1359,7 +1687,7 @@ export default function SalaryManager({ session }: SalaryManagerProps) {
 
           {otHours && otRate ? (
             <div className="p-3 rounded-xl bg-slate-50 border border-slate-200 flex justify-between font-medium">
-              <span className="text-slate-600">Calculated OT Amount:</span>
+              <span className="text-slate-600">Calculated Overtime Amount:</span>
               <span className="font-semibold text-emerald-700">
                 ₹{(Number(otHours) * Number(otRate)).toFixed(2)}
               </span>
@@ -1368,7 +1696,7 @@ export default function SalaryManager({ session }: SalaryManagerProps) {
 
           <div>
             <label className="block text-[11px] font-semibold text-slate-700 mb-1.5 uppercase tracking-wider">
-              Remarks / Work Description
+              Remarks
             </label>
             <input
               type="text"
@@ -1417,12 +1745,12 @@ export default function SalaryManager({ session }: SalaryManagerProps) {
 
           <div>
             <label className="block text-[11px] font-semibold text-slate-700 mb-1.5 uppercase tracking-wider">
-              Select Operator *
+              Worker Name *
             </label>
             <CustomSelect
               value={shiftWorkerId}
               onChange={setShiftWorkerId}
-              placeholder="-- Select Operator --"
+              placeholder="-- Select Worker --"
               options={
                 editingShift && editingShift.worker && !workers.some(w => w.id === (editingShift.worker.id || editingShift.workerId))
                   ? [
@@ -1464,7 +1792,7 @@ export default function SalaryManager({ session }: SalaryManagerProps) {
                 onChange={setShiftType}
                 options={[
                   { value: 'Night Shift', label: 'Night Shift' },
-                  { value: 'Sunday / Holiday Shift', label: 'Sunday / Holiday Shift' },
+                  { value: 'Holiday Shift', label: 'Holiday Shift' },
                   { value: 'Double Shift', label: 'Double Shift' }
                 ]}
               />
@@ -1473,7 +1801,7 @@ export default function SalaryManager({ session }: SalaryManagerProps) {
 
           <div>
             <label className="block text-[11px] font-semibold text-slate-700 mb-1.5 uppercase tracking-wider">
-              Shift Allowance Amount (₹) *
+              Allowance Amount (₹) *
             </label>
             <input
               type="number"
@@ -1504,9 +1832,9 @@ export default function SalaryManager({ session }: SalaryManagerProps) {
       <SlideOverDrawer
         isOpen={editSalaryModal}
         onClose={() => setEditSalaryModal(false)}
-        title="Edit Payroll Record"
-        subtitle={`Update monthly payroll figures for ${editingSalaryRecord?.worker?.user?.fullName || 'Operator'}`}
-        badge="Payroll"
+        title="Edit Salary Record"
+        subtitle={`Update monthly salary figures for ${editingSalaryRecord?.worker?.user?.fullName || 'Worker'}`}
+        badge="Salary"
         widthClass="sm:max-w-xl"
         footer={
           <div className="flex items-center gap-3 w-full">

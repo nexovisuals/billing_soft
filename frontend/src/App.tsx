@@ -20,7 +20,8 @@ import {
   ChevronRight,
   Shield,
   BarChart3,
-  Zap
+  Zap,
+  CheckCircle2
 } from 'lucide-react';
 import { UserSession } from './types';
 import LoginView from './components/LoginView';
@@ -34,6 +35,7 @@ import PaymentManager from './components/PaymentManager';
 import ExpenseManager from './components/ExpenseManager';
 import ProductionManager from './components/ProductionManager';
 import SalaryManager from './components/SalaryManager';
+import ApprovalsManager from './components/ApprovalsManager';
 import AnalyticsDashboard from './components/AnalyticsDashboard';
 import SettingsManager from './components/SettingsManager';
 import UserManager from './components/UserManager';
@@ -64,31 +66,31 @@ const navGroups: NavGroup[] = [
   },
   {
     id: 'inventory_group',
-    label: 'Customer & Stock',
+    label: 'Customers & Stock',
     icon: Boxes,
     subItems: [
       { id: 'companies', label: 'Companies', icon: Building2 },
-      { id: 'stock', label: 'Raw Stock & Ledgers', icon: Layers },
-      { id: 'materials', label: 'Parts Catalog', icon: Cpu },
+      { id: 'stock', label: 'Raw Stock', icon: Layers },
+      { id: 'materials', label: 'Products', icon: Cpu },
     ],
   },
   {
     id: 'billing_group',
-    label: 'Billing & Dispatches',
+    label: 'Billing',
     icon: Receipt,
     subItems: [
-      { id: 'dcs', label: 'Delivery Challans (DC)', icon: Truck },
-      { id: 'invoices', label: 'Tax Invoices', icon: Receipt },
+      { id: 'dcs', label: 'Delivery Challans', icon: Truck },
+      { id: 'invoices', label: 'Invoices', icon: Receipt },
       { id: 'payments', label: 'Customer Payments', icon: CreditCard },
     ],
   },
   {
     id: 'expenses_group',
-    label: 'Workshop Expenses',
+    label: 'Expenses',
     icon: ShoppingBag,
     subItems: [
-      { id: 'purchases', label: 'Purchases & Spares', icon: ShoppingBag },
-      { id: 'expenses', label: 'Other Operating Expenses', icon: Zap },
+      { id: 'purchases', label: 'Purchases', icon: ShoppingBag },
+      { id: 'expenses', label: 'Other Expenses', icon: Zap },
     ],
   },
   {
@@ -96,19 +98,24 @@ const navGroups: NavGroup[] = [
     label: 'Workers & Operations',
     icon: Users,
     subItems: [
-      { id: 'workers', label: 'Workers Master', icon: Users },
-      { id: 'production', label: 'Daily Machining Work', icon: Layers },
-      { id: 'attendance', label: 'Attendance & Payroll', icon: Clock },
+      { id: 'workers', label: 'Workers', icon: Users },
+      { id: 'production', label: 'Daily Work', icon: Layers },
+      { id: 'attendance', label: 'Attendance & Salary', icon: Clock },
     ],
   },
   {
+    id: 'approvals',
+    label: 'Approvals',
+    icon: CheckCircle2,
+  },
+  {
     id: 'reports',
-    label: 'Reports Center',
+    label: 'Reports',
     icon: BarChart3,
   },
   {
     id: 'users',
-    label: 'Users & Roles',
+    label: 'Users',
     icon: Shield,
     adminOnly: true,
   },
@@ -474,29 +481,29 @@ export default function App() {
       {/* ──────────────────────────────────────────────────────────── */}
       {/* 3. MAIN DASHBOARD CONTENT AREA                               */}
       {/* ──────────────────────────────────────────────────────────── */}
-      <main className="flex-1 lg:pl-64 min-h-screen flex flex-col bg-white">
+      <main className="flex-1 lg:pl-64 min-h-screen flex flex-col bg-white w-full max-w-full overflow-x-hidden min-w-0">
         {/* Top Minimal Bar */}
-        <header className="sticky top-0 z-30 bg-white/95 backdrop-blur-md border-b border-slate-100 px-6 lg:px-10 py-4 flex items-center justify-between">
-          <div className="flex items-center gap-4">
+        <header className="sticky top-0 z-30 bg-white/95 backdrop-blur-md border-b border-slate-100 px-3.5 sm:px-6 lg:px-10 py-3 sm:py-4 flex items-center justify-between min-w-0">
+          <div className="flex items-center gap-2.5 sm:gap-4 min-w-0">
             <button
               onClick={() => setMobileMenuOpen(true)}
-              className="lg:hidden w-10 h-10 rounded-2xl border border-slate-200 flex items-center justify-center text-slate-700 hover:bg-slate-50 whitespace-nowrap"
+              className="lg:hidden w-9 h-9 sm:w-10 sm:h-10 rounded-xl sm:rounded-2xl border border-slate-200 flex items-center justify-center text-slate-700 hover:bg-slate-50 shrink-0 whitespace-nowrap"
             >
               <Menu className="w-5 h-5" />
             </button>
 
-            <div>
-              <h1 className="text-base lg:text-lg font-semibold text-slate-900 leading-tight">
+            <div className="min-w-0">
+              <h1 className="text-sm sm:text-base lg:text-lg font-semibold text-slate-900 leading-tight truncate">
                 Welcome, {session.fullName}
               </h1>
-              <p className="text-xs text-slate-500 font-normal mt-0.5">
+              <p className="text-[11px] sm:text-xs text-slate-500 font-normal mt-0.5 truncate">
                 Job Work Management & Billing Control
               </p>
             </div>
           </div>
 
           {/* Quick Header Actions & Search */}
-          <div className="flex items-center gap-3">
+          <div className="flex items-center gap-2 sm:gap-3 shrink-0">
             <div className="hidden md:flex items-center gap-2 px-3.5 py-2 rounded-xl bg-slate-50 border border-slate-200 text-slate-500 text-xs w-64 focus-within:border-slate-400 focus-within:bg-white transition-all">
               <Search className="w-4 h-4 text-slate-400" />
               <input
@@ -512,7 +519,7 @@ export default function App() {
         </header>
 
         {/* Page Inner Container */}
-        <div className="p-6 lg:p-10 max-w-7xl w-full mx-auto space-y-8">
+        <div className="px-3.5 py-4 sm:p-6 lg:p-10 max-w-7xl w-full mx-auto space-y-6 sm:space-y-8 min-w-0 overflow-x-hidden">
           {/* ──────────────────────────────────────────────────────────── */}
           {/* TAB CONTENT SWITCHER                                         */}
           {/* ──────────────────────────────────────────────────────────── */}
@@ -531,9 +538,11 @@ export default function App() {
           ) : activeTab === 'payments' ? (
             <PaymentManager session={session} />
           ) : activeTab === 'purchases' ? (
-            <ExpenseManager session={session} defaultSubTab="purchases" />
+            <ExpenseManager session={session} pageMode="purchases" />
           ) : activeTab === 'expenses' ? (
-            <ExpenseManager session={session} defaultSubTab="operating" />
+            <ExpenseManager session={session} pageMode="operating" />
+          ) : activeTab === 'approvals' ? (
+            <ApprovalsManager session={session} />
           ) : activeTab === 'workers' ? (
             <ProductionManager session={session} defaultSubTab="workers" />
           ) : activeTab === 'production' ? (

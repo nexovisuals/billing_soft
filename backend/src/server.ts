@@ -14,6 +14,7 @@ import invoiceRoutes from './routes/invoice.routes.js';
 import paymentRoutes from './routes/payment.routes.js';
 import expenseRoutes from './routes/expense.routes.js';
 import salaryRoutes from './routes/salary.routes.js';
+import approvalsRoutes from './routes/approvals.routes.js';
 import analyticsRoutes from './routes/analytics.routes.js';
 import userRoutes from './routes/user.routes.js';
 
@@ -59,6 +60,7 @@ app.use('/api/invoices', invoiceRoutes);
 app.use('/api/payments', paymentRoutes);
 app.use('/api/expenses', expenseRoutes);
 app.use('/api/salary', salaryRoutes);
+app.use('/api/approvals', approvalsRoutes);
 app.use('/api/analytics', analyticsRoutes);
 app.use('/api/users', userRoutes);
 
