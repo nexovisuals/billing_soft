@@ -81,9 +81,10 @@ interface AnalyticsDashboardProps {
 export default function AnalyticsDashboard({ session, onNavigateTab }: AnalyticsDashboardProps) {
   const [data, setData] = useState<AnalyticsData | null>(null);
   const [loading, setLoading] = useState(true);
+  const [wakingUp, setWakingUp] = useState(false);
   const [activeFeed, setActiveFeed] = useState<'invoices' | 'challans' | 'payments'>('invoices');
 
-  const fetchAnalytics = async () => {
+  const fetchAnalytics = async (retryCount = 0) => {
     try {
       setLoading(true);
       const res = await fetch(`${API_BASE_URL}/api/analytics/dashboard`, {
@@ -92,9 +93,17 @@ export default function AnalyticsDashboard({ session, onNavigateTab }: Analytics
       if (res.ok) {
         const json = await res.json();
         setData(json);
+        setWakingUp(false);
+      } else if ((res.status >= 500 || res.status === 404) && retryCount < 4) {
+        setWakingUp(true);
+        setTimeout(() => fetchAnalytics(retryCount + 1), 4000);
       }
     } catch (err) {
       console.error('Failed to load dashboard analytics:', err);
+      if (retryCount < 4) {
+        setWakingUp(true);
+        setTimeout(() => fetchAnalytics(retryCount + 1), 4000);
+      }
     } finally {
       setLoading(false);
     }
@@ -187,6 +196,14 @@ export default function AnalyticsDashboard({ session, onNavigateTab }: Analytics
           </button>
         </div>
       </div>
+
+      {/* Cloud Backend Connecting Indicator (for Render Free Tier Wakeups) */}
+      {wakingUp && (
+        <div className="flex items-center gap-2 p-3 rounded-2xl bg-amber-50 border border-amber-200/80 text-amber-800 text-xs">
+          <Clock className="w-4 h-4 animate-spin text-amber-600 shrink-0" />
+          <span>Waking up cloud database server... Please wait a few seconds, your data is loading automatically.</span>
+        </div>
+      )}
 
       {/* 4 PRIMARY EXECUTIVE KPI CARDS - 2x2 ON MOBILE */}
       <div className="grid grid-cols-2 lg:grid-cols-4 gap-3 sm:gap-5">
