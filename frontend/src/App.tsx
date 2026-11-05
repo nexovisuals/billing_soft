@@ -24,6 +24,7 @@ import {
   CheckCircle2
 } from 'lucide-react';
 import { UserSession } from './types';
+import { API_BASE_URL } from './config';
 import LoginView from './components/LoginView';
 import WorkerPortal from './components/WorkerPortal';
 import CompanyManager from './components/CompanyManager';
@@ -163,6 +164,43 @@ export default function App() {
     }
   }, []);
 
+  // Approvals count for sidebar badge
+  const [pendingApprovalsCount, setPendingApprovalsCount] = useState<number>(0);
+
+  const fetchApprovalCount = async () => {
+    if (!session?.token) return;
+    try {
+      const res = await fetch(`${API_BASE_URL}/api/approvals/pending`, {
+        headers: { Authorization: `Bearer ${session.token}` },
+      });
+      if (res.ok) {
+        const data = await res.json();
+        setPendingApprovalsCount(data.counts?.total ?? 0);
+      }
+    } catch (e) {
+      // ignore
+    }
+  };
+
+  useEffect(() => {
+    if (session?.token) {
+      fetchApprovalCount();
+      const interval = setInterval(fetchApprovalCount, 25000);
+      window.addEventListener('svt_approvals_updated', fetchApprovalCount);
+      return () => {
+        clearInterval(interval);
+        window.removeEventListener('svt_approvals_updated', fetchApprovalCount);
+      };
+    }
+  }, [session?.token]);
+
+  // Refresh approval count when switching to or from approvals tab
+  useEffect(() => {
+    if (session?.token) {
+      fetchApprovalCount();
+    }
+  }, [activeTab]);
+
   // Ensure non-admin users cannot stay on admin-only tabs
   useEffect(() => {
     if (session && session.role !== 'ADMIN' && (activeTab === 'users' || activeTab === 'settings')) {
@@ -233,14 +271,27 @@ export default function App() {
                   <button
                     key={group.id}
                     onClick={() => handleSelectTab(group.id)}
-                    className={`flex items-center gap-3 px-3 py-2.5 rounded-xl text-xs font-medium transition-all w-full text-left whitespace-nowrap ${
+                    className={`flex items-center justify-between px-3 py-2.5 rounded-xl text-xs font-medium transition-all w-full text-left whitespace-nowrap ${
                       isDirectActive
                         ? 'bg-slate-100 border border-slate-200/80 text-slate-900 font-semibold shadow-2xs'
                         : 'text-slate-600 hover:text-slate-900 hover:bg-slate-50 border border-transparent'
                     }`}
                   >
-                    <Icon className={`w-4 h-4 shrink-0 transition-colors ${isDirectActive ? 'text-slate-900' : 'text-slate-400'}`} />
-                    <span className="truncate">{group.label}</span>
+                    <div className="flex items-center gap-3 truncate">
+                      <Icon className={`w-4 h-4 shrink-0 transition-colors ${isDirectActive ? 'text-slate-900' : 'text-slate-400'}`} />
+                      <span className="truncate">{group.label}</span>
+                    </div>
+                    {group.id === 'approvals' && (
+                      <span
+                        className={`px-2 py-0.5 rounded-full text-[11px] font-semibold shrink-0 transition-colors ${
+                          pendingApprovalsCount > 0
+                            ? 'bg-amber-100 text-amber-800 border border-amber-200'
+                            : 'bg-slate-100 text-slate-500 border border-slate-200'
+                        }`}
+                      >
+                        {pendingApprovalsCount}
+                      </span>
+                    )}
                   </button>
                 );
               }
@@ -389,14 +440,27 @@ export default function App() {
                             handleSelectTab(group.id);
                             setMobileMenuOpen(false);
                           }}
-                          className={`flex items-center gap-3 px-3.5 py-2.5 rounded-xl text-xs font-medium transition-colors ${
+                          className={`flex items-center justify-between px-3.5 py-2.5 rounded-xl text-xs font-medium transition-colors w-full ${
                             isDirectActive
                               ? 'bg-slate-100 border border-slate-200 text-slate-900 font-semibold shadow-2xs'
                               : 'text-slate-600 hover:bg-slate-50 hover:text-slate-900 border border-transparent'
                           } whitespace-nowrap`}
                         >
-                          <Icon className="w-4 h-4" />
-                          <span>{group.label}</span>
+                          <div className="flex items-center gap-3 truncate">
+                            <Icon className="w-4 h-4 shrink-0" />
+                            <span className="truncate">{group.label}</span>
+                          </div>
+                          {group.id === 'approvals' && (
+                            <span
+                              className={`px-2 py-0.5 rounded-full text-[11px] font-semibold shrink-0 transition-colors ${
+                                pendingApprovalsCount > 0
+                                  ? 'bg-amber-100 text-amber-800 border border-amber-200'
+                                  : 'bg-slate-100 text-slate-500 border border-slate-200'
+                              }`}
+                            >
+                              {pendingApprovalsCount}
+                            </span>
+                          )}
                         </button>
                       );
                     }

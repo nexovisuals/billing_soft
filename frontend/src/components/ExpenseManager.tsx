@@ -151,28 +151,100 @@ export default function ExpenseManager({ session, pageMode, defaultSubTab }: Exp
   const [formError, setFormError] = useState<string | null>(null);
   const [notification, setNotification] = useState<{ type: 'success' | 'error'; message: string } | null>(null);
 
-  // Purchase Form Fields - Start empty by default
-  const [purSupplier, setPurSupplier] = useState('');
-  const [purItem, setPurItem] = useState('');
-  const [purCategory, setPurCategory] = useState('');
-  const [purIsCustomCategory, setPurIsCustomCategory] = useState(false);
-  const [purQty, setPurQty] = useState<number | ''>('');
-  const [purUom, setPurUom] = useState('');
-  const [purPrice, setPurPrice] = useState<number | ''>('');
-  const [purBillNo, setPurBillNo] = useState('');
-  const [purStatus, setPurStatus] = useState('PAID');
-  const [purDate, setPurDate] = useState(new Date().toISOString().split('T')[0]);
-  const [purRemarks, setPurRemarks] = useState('');
+  // Multi-item form state for Purchases
+  interface PurchaseFormItem {
+    id: string;
+    itemName: string;
+    category: string;
+    isCustomCategory: boolean;
+    supplierName: string;
+    quantity: number | '';
+    uom: string;
+    unitPrice: number | '';
+    supplierBillNo: string;
+    paymentStatus: string;
+    purchaseDate: string;
+    remarks: string;
+  }
 
-  // Operating Expense Form Fields - Start empty by default
-  const [expCategory, setExpCategory] = useState('');
-  const [expIsCustomCategory, setExpIsCustomCategory] = useState(false);
-  const [expDesc, setExpDesc] = useState('');
-  const [expAmount, setExpAmount] = useState<number | ''>('');
-  const [expDate, setExpDate] = useState(new Date().toISOString().split('T')[0]);
-  const [expMode, setExpMode] = useState('');
-  const [expRefNo, setExpRefNo] = useState('');
-  const [expRemarks, setExpRemarks] = useState('');
+  // Multi-item form state for Operating Expenses
+  interface ExpenseFormItem {
+    id: string;
+    category: string;
+    isCustomCategory: boolean;
+    amount: number | '';
+    description: string;
+    expenseDate: string;
+    paymentMode: string;
+    referenceNo: string;
+    remarks: string;
+  }
+
+  const createDefaultPurchaseItem = (seed?: Partial<PurchaseFormItem>): PurchaseFormItem => ({
+    id: `pur-${Date.now()}-${Math.random().toString(36).substring(2, 7)}`,
+    itemName: '',
+    category: '',
+    isCustomCategory: false,
+    supplierName: seed?.supplierName || '',
+    quantity: '',
+    uom: '',
+    unitPrice: '',
+    supplierBillNo: seed?.supplierBillNo || '',
+    paymentStatus: seed?.paymentStatus || 'PAID',
+    purchaseDate: seed?.purchaseDate || new Date().toISOString().split('T')[0],
+    remarks: '',
+  });
+
+  const createDefaultExpenseItem = (seed?: Partial<ExpenseFormItem>): ExpenseFormItem => ({
+    id: `exp-${Date.now()}-${Math.random().toString(36).substring(2, 7)}`,
+    category: '',
+    isCustomCategory: false,
+    amount: '',
+    description: '',
+    expenseDate: seed?.expenseDate || new Date().toISOString().split('T')[0],
+    paymentMode: seed?.paymentMode || '',
+    referenceNo: '',
+    remarks: '',
+  });
+
+  const [purchaseItems, setPurchaseItems] = useState<PurchaseFormItem[]>([createDefaultPurchaseItem()]);
+  const [expenseItems, setExpenseItems] = useState<ExpenseFormItem[]>([createDefaultExpenseItem()]);
+
+  const addPurchaseRow = () => {
+    const last = purchaseItems[purchaseItems.length - 1];
+    setPurchaseItems((prev) => [...prev, createDefaultPurchaseItem(last)]);
+  };
+
+  const removePurchaseRow = (index: number) => {
+    if (purchaseItems.length <= 1) return;
+    setPurchaseItems((prev) => prev.filter((_, i) => i !== index));
+  };
+
+  const updatePurchaseField = (index: number, field: keyof PurchaseFormItem, val: any) => {
+    setPurchaseItems((prev) => {
+      const updated = [...prev];
+      updated[index] = { ...updated[index], [field]: val };
+      return updated;
+    });
+  };
+
+  const addExpenseRow = () => {
+    const last = expenseItems[expenseItems.length - 1];
+    setExpenseItems((prev) => [...prev, createDefaultExpenseItem(last)]);
+  };
+
+  const removeExpenseRow = (index: number) => {
+    if (expenseItems.length <= 1) return;
+    setExpenseItems((prev) => prev.filter((_, i) => i !== index));
+  };
+
+  const updateExpenseField = (index: number, field: keyof ExpenseFormItem, val: any) => {
+    setExpenseItems((prev) => {
+      const updated = [...prev];
+      updated[index] = { ...updated[index], [field]: val };
+      return updated;
+    });
+  };
 
   // Delete ID
   const [deleteId, setDeleteId] = useState<{ id: string; type: 'purchase' | 'operating' } | null>(null);
@@ -239,120 +311,154 @@ export default function ExpenseManager({ session, pageMode, defaultSubTab }: Exp
 
   const openEditPurchase = (p: PurchaseItem) => {
     setEditingPurchaseId(p.id);
-    setPurSupplier(p.supplierName || '');
-    setPurItem(p.itemName);
-    setPurCategory(p.category);
     const isCustomPur = !DEFAULT_PURCHASE_CATEGORIES.some((c) => c.value.toLowerCase() === (p.category || '').toLowerCase()) &&
       !savedPurCategories.some((c) => c.toLowerCase() === (p.category || '').toLowerCase());
-    setPurIsCustomCategory(isCustomPur);
-    setPurQty(Number(p.quantity));
-    setPurUom(p.uom || '');
-    setPurPrice(Number(p.unitPrice));
-    setPurBillNo(p.supplierBillNo || '');
-    setPurStatus(p.paymentStatus || 'PAID');
-    setPurDate(p.purchaseDate ? p.purchaseDate.split('T')[0] : new Date().toISOString().split('T')[0]);
-    setPurRemarks(p.remarks || '');
+    setPurchaseItems([
+      {
+        id: p.id,
+        itemName: p.itemName,
+        category: p.category,
+        isCustomCategory: isCustomPur,
+        supplierName: p.supplierName || '',
+        quantity: Number(p.quantity),
+        uom: p.uom || '',
+        unitPrice: Number(p.unitPrice),
+        supplierBillNo: p.supplierBillNo || '',
+        paymentStatus: p.paymentStatus || 'PAID',
+        purchaseDate: p.purchaseDate ? p.purchaseDate.split('T')[0] : new Date().toISOString().split('T')[0],
+        remarks: p.remarks || '',
+      }
+    ]);
     setFormError(null);
     setPurchaseModalOpen(true);
   };
 
   const openEditExpense = (e: OtherExpenseItem) => {
     setEditingExpenseId(e.id);
-    setExpCategory(e.category);
     const isCustomExp = !DEFAULT_EXPENSE_CATEGORIES.some((c) => c.value.toLowerCase() === (e.category || '').toLowerCase()) &&
       !savedExpCategories.some((c) => c.toLowerCase() === (e.category || '').toLowerCase());
-    setExpIsCustomCategory(isCustomExp);
-    setExpDesc(e.description);
-    setExpAmount(Number(e.amount));
-    setExpDate(e.expenseDate ? e.expenseDate.split('T')[0] : new Date().toISOString().split('T')[0]);
-    setExpMode(e.paymentMode || '');
-    setExpRefNo(e.referenceNo || '');
-    setExpRemarks(e.remarks || '');
+    setExpenseItems([
+      {
+        id: e.id,
+        category: e.category,
+        isCustomCategory: isCustomExp,
+        amount: Number(e.amount),
+        description: e.description,
+        expenseDate: e.expenseDate ? e.expenseDate.split('T')[0] : new Date().toISOString().split('T')[0],
+        paymentMode: e.paymentMode || '',
+        referenceNo: e.referenceNo || '',
+        remarks: e.remarks || '',
+      }
+    ]);
     setFormError(null);
     setExpenseModalOpen(true);
   };
 
-  // Submit Purchase
+  // Submit Purchases
   const handlePurchaseSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setFormError(null);
 
-    if (!purItem.trim()) {
-      setFormError('Item name is required');
-      return;
-    }
-    if (!purCategory.trim()) {
-      setFormError('Please select or specify a category');
-      return;
-    }
-    if (!purQty || Number(purQty) <= 0 || !purPrice || Number(purPrice) < 0) {
-      setFormError('Valid quantity and price are required');
-      return;
-    }
-    if (!purUom.trim()) {
-      setFormError('Please select a unit of measurement');
-      return;
+    // Validate each item
+    for (let i = 0; i < purchaseItems.length; i++) {
+      const it = purchaseItems[i];
+      const prefix = purchaseItems.length > 1 ? `Purchase #${i + 1}: ` : '';
+      if (!it.itemName.trim()) {
+        setFormError(`${prefix}Item name is required`);
+        return;
+      }
+      if (!it.category.trim()) {
+        setFormError(`${prefix}Please select or specify a category`);
+        return;
+      }
+      if (!it.quantity || Number(it.quantity) <= 0 || it.unitPrice === '' || Number(it.unitPrice) < 0) {
+        setFormError(`${prefix}Valid quantity (> 0) and price (≥ 0) are required`);
+        return;
+      }
+      if (!it.uom.trim()) {
+        setFormError(`${prefix}Please select a unit of measurement`);
+        return;
+      }
     }
 
     try {
       setLoading(true);
-      const computedTotal = Math.round(Number(purQty) * Number(purPrice) * 100) / 100;
-      const url = editingPurchaseId
-        ? `${API_BASE_URL}/api/expenses/purchases/${editingPurchaseId}`
-        : `${API_BASE_URL}/api/expenses/purchases`;
-      const method = editingPurchaseId ? 'PUT' : 'POST';
 
-      const res = await fetch(url, {
-        method,
-        headers: {
-          'Content-Type': 'application/json',
-          Authorization: `Bearer ${session.token}`,
-        },
-        body: JSON.stringify({
-          supplierName: purSupplier || undefined,
-          itemName: purItem,
-          category: purCategory,
-          quantity: Number(purQty),
-          uom: purUom,
-          unitPrice: Number(purPrice),
-          totalAmount: computedTotal,
-          supplierBillNo: purBillNo || undefined,
-          paymentStatus: purStatus,
-          purchaseDate: purDate,
-          remarks: purRemarks || undefined,
-        }),
-      });
+      if (editingPurchaseId) {
+        const item = purchaseItems[0];
+        const computedTotal = Math.round(Number(item.quantity) * Number(item.unitPrice) * 100) / 100;
+        const res = await fetch(`${API_BASE_URL}/api/expenses/purchases/${editingPurchaseId}`, {
+          method: 'PUT',
+          headers: {
+            'Content-Type': 'application/json',
+            Authorization: `Bearer ${session.token}`,
+          },
+          body: JSON.stringify({
+            supplierName: item.supplierName || undefined,
+            itemName: item.itemName,
+            category: item.category,
+            quantity: Number(item.quantity),
+            uom: item.uom,
+            unitPrice: Number(item.unitPrice),
+            totalAmount: computedTotal,
+            supplierBillNo: item.supplierBillNo || undefined,
+            paymentStatus: item.paymentStatus,
+            purchaseDate: item.purchaseDate,
+            remarks: item.remarks || undefined,
+          }),
+        });
 
-      const data = await res.json();
-      if (!res.ok) {
-        throw new Error(data.error || 'Failed to save purchase');
+        const data = await res.json();
+        if (!res.ok) throw new Error(data.error || 'Failed to save purchase');
+
+        if (item.category) saveCustomPurchaseCategory(item.category);
+        if (item.uom) saveCustomUnit(item.uom);
+
+        setNotification({
+          type: 'success',
+          message: data.message || `Purchase updated successfully`,
+        });
+      } else {
+        for (const item of purchaseItems) {
+          const computedTotal = Math.round(Number(item.quantity) * Number(item.unitPrice) * 100) / 100;
+          const res = await fetch(`${API_BASE_URL}/api/expenses/purchases`, {
+            method: 'POST',
+            headers: {
+              'Content-Type': 'application/json',
+              Authorization: `Bearer ${session.token}`,
+            },
+            body: JSON.stringify({
+              supplierName: item.supplierName || undefined,
+              itemName: item.itemName,
+              category: item.category,
+              quantity: Number(item.quantity),
+              uom: item.uom,
+              unitPrice: Number(item.unitPrice),
+              totalAmount: computedTotal,
+              supplierBillNo: item.supplierBillNo || undefined,
+              paymentStatus: item.paymentStatus,
+              purchaseDate: item.purchaseDate,
+              remarks: item.remarks || undefined,
+            }),
+          });
+
+          const data = await res.json();
+          if (!res.ok) throw new Error(data.error || 'Failed to save purchase');
+
+          if (item.category) saveCustomPurchaseCategory(item.category);
+          if (item.uom) saveCustomUnit(item.uom);
+        }
+
+        setNotification({
+          type: 'success',
+          message: `${purchaseItems.length} purchase ${purchaseItems.length === 1 ? 'item' : 'items'} recorded successfully`,
+        });
       }
 
-      // Automatically store custom category & unit in dropdown options for future entries
-      if (purCategory) {
-        saveCustomPurchaseCategory(purCategory);
-        setSavedPurCategories(getSavedCustomPurchaseCategories());
-      }
-      if (purUom) {
-        saveCustomUnit(purUom);
-      }
-
-      setNotification({
-        type: 'success',
-        message: data.message || `Purchase of ${purItem} saved successfully`,
-      });
+      setSavedPurCategories(getSavedCustomPurchaseCategories());
       setPurchaseModalOpen(false);
       setEditingPurchaseId(null);
-      // Reset
-      setPurItem('');
-      setPurSupplier('');
-      setPurCategory('');
-      setPurIsCustomCategory(false);
-      setPurQty('');
-      setPurUom('');
-      setPurPrice('');
-      setPurBillNo('');
-      setPurRemarks('');
+      setPurchaseItems([createDefaultPurchaseItem()]);
       fetchData();
     } catch (err: any) {
       setFormError(err.message || 'An error occurred');
@@ -361,72 +467,95 @@ export default function ExpenseManager({ session, pageMode, defaultSubTab }: Exp
     }
   };
 
-  // Submit Operating Expense
+  // Submit Operating Expenses
   const handleExpenseSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setFormError(null);
 
-    if (!expCategory.trim()) {
-      setFormError('Please select or specify an expense category');
-      return;
-    }
-    if (!expDesc.trim()) {
-      setFormError('Expense description is required');
-      return;
-    }
-    if (!expAmount || Number(expAmount) <= 0) {
-      setFormError('Valid expense amount is required');
-      return;
+    // Validate each item
+    for (let i = 0; i < expenseItems.length; i++) {
+      const it = expenseItems[i];
+      const prefix = expenseItems.length > 1 ? `Expense #${i + 1}: ` : '';
+      if (!it.category.trim()) {
+        setFormError(`${prefix}Please select or specify an expense category`);
+        return;
+      }
+      if (!it.description.trim()) {
+        setFormError(`${prefix}Expense description is required`);
+        return;
+      }
+      if (!it.amount || Number(it.amount) <= 0) {
+        setFormError(`${prefix}Valid expense amount (> 0) is required`);
+        return;
+      }
     }
 
     try {
       setLoading(true);
-      const url = editingExpenseId
-        ? `${API_BASE_URL}/api/expenses/operating/${editingExpenseId}`
-        : `${API_BASE_URL}/api/expenses/operating`;
-      const method = editingExpenseId ? 'PUT' : 'POST';
 
-      const res = await fetch(url, {
-        method,
-        headers: {
-          'Content-Type': 'application/json',
-          Authorization: `Bearer ${session.token}`,
-        },
-        body: JSON.stringify({
-          category: expCategory,
-          description: expDesc,
-          amount: Number(expAmount),
-          expenseDate: expDate,
-          paymentMode: expMode || undefined,
-          referenceNo: expRefNo || undefined,
-          remarks: expRemarks || undefined,
-        }),
-      });
+      if (editingExpenseId) {
+        const item = expenseItems[0];
+        const res = await fetch(`${API_BASE_URL}/api/expenses/operating/${editingExpenseId}`, {
+          method: 'PUT',
+          headers: {
+            'Content-Type': 'application/json',
+            Authorization: `Bearer ${session.token}`,
+          },
+          body: JSON.stringify({
+            category: item.category,
+            description: item.description,
+            amount: Number(item.amount),
+            expenseDate: item.expenseDate,
+            paymentMode: item.paymentMode || undefined,
+            referenceNo: item.referenceNo || undefined,
+            remarks: item.remarks || undefined,
+          }),
+        });
 
-      const data = await res.json();
-      if (!res.ok) {
-        throw new Error(data.error || 'Failed to save expense');
+        const data = await res.json();
+        if (!res.ok) throw new Error(data.error || 'Failed to save expense');
+
+        if (item.category) saveCustomExpenseCategory(item.category);
+
+        setNotification({
+          type: 'success',
+          message: data.message || `Expense updated successfully`,
+        });
+      } else {
+        for (const item of expenseItems) {
+          const res = await fetch(`${API_BASE_URL}/api/expenses/operating`, {
+            method: 'POST',
+            headers: {
+              'Content-Type': 'application/json',
+              Authorization: `Bearer ${session.token}`,
+            },
+            body: JSON.stringify({
+              category: item.category,
+              description: item.description,
+              amount: Number(item.amount),
+              expenseDate: item.expenseDate,
+              paymentMode: item.paymentMode || undefined,
+              referenceNo: item.referenceNo || undefined,
+              remarks: item.remarks || undefined,
+            }),
+          });
+
+          const data = await res.json();
+          if (!res.ok) throw new Error(data.error || 'Failed to save expense');
+
+          if (item.category) saveCustomExpenseCategory(item.category);
+        }
+
+        setNotification({
+          type: 'success',
+          message: `${expenseItems.length} ${expenseItems.length === 1 ? 'expense' : 'expenses'} recorded successfully`,
+        });
       }
 
-      // Automatically store custom expense category in dropdown options for future entries
-      if (expCategory) {
-        saveCustomExpenseCategory(expCategory);
-        setSavedExpCategories(getSavedCustomExpenseCategories());
-      }
-
-      setNotification({
-        type: 'success',
-        message: data.message || `Expense saved successfully`,
-      });
+      setSavedExpCategories(getSavedCustomExpenseCategories());
       setExpenseModalOpen(false);
       setEditingExpenseId(null);
-      setExpCategory('');
-      setExpIsCustomCategory(false);
-      setExpDesc('');
-      setExpAmount('');
-      setExpMode('');
-      setExpRefNo('');
-      setExpRemarks('');
+      setExpenseItems([createDefaultExpenseItem()]);
       fetchData();
     } catch (err: any) {
       setFormError(err.message || 'An error occurred');
@@ -496,6 +625,24 @@ export default function ExpenseManager({ session, pageMode, defaultSubTab }: Exp
     return matchesSearch && matchesCategory;
   });
 
+  const totalPurchaseValue = useMemo(() => {
+    return purchaseItems.reduce((acc, it) => {
+      if (it.quantity && it.unitPrice) {
+        return acc + (Number(it.quantity) * Number(it.unitPrice));
+      }
+      return acc;
+    }, 0);
+  }, [purchaseItems]);
+
+  const totalExpenseValue = useMemo(() => {
+    return expenseItems.reduce((acc, it) => {
+      if (it.amount) {
+        return acc + Number(it.amount);
+      }
+      return acc;
+    }, 0);
+  }, [expenseItems]);
+
   return (
     <div className="space-y-6">
       {/* Toast Notification */}
@@ -505,11 +652,10 @@ export default function ExpenseManager({ session, pageMode, defaultSubTab }: Exp
             initial={{ opacity: 0, y: -10 }}
             animate={{ opacity: 1, y: 0 }}
             exit={{ opacity: 0, y: -10 }}
-            className={`p-4 rounded-2xl flex items-center justify-between border ${
-              notification.type === 'success'
+            className={`p-4 rounded-2xl flex items-center justify-between border ${notification.type === 'success'
                 ? 'bg-emerald-50 border-emerald-200 text-emerald-800'
                 : 'bg-rose-50 border-rose-200 text-rose-800'
-            }`}
+              }`}
           >
             <div className="flex items-center gap-2 text-sm font-medium">
               {notification.type === 'success' ? (
@@ -584,15 +730,7 @@ export default function ExpenseManager({ session, pageMode, defaultSubTab }: Exp
             <button
               onClick={() => {
                 setEditingPurchaseId(null);
-                setPurItem('');
-                setPurSupplier('');
-                setPurCategory('');
-                setPurIsCustomCategory(false);
-                setPurQty('');
-                setPurUom('');
-                setPurPrice('');
-                setPurBillNo('');
-                setPurRemarks('');
+                setPurchaseItems([createDefaultPurchaseItem()]);
                 setFormError(null);
                 setPurchaseModalOpen(true);
               }}
@@ -605,13 +743,7 @@ export default function ExpenseManager({ session, pageMode, defaultSubTab }: Exp
             <button
               onClick={() => {
                 setEditingExpenseId(null);
-                setExpCategory('');
-                setExpIsCustomCategory(false);
-                setExpDesc('');
-                setExpAmount('');
-                setExpMode('');
-                setExpRefNo('');
-                setExpRemarks('');
+                setExpenseItems([createDefaultExpenseItem()]);
                 setFormError(null);
                 setExpenseModalOpen(true);
               }}
@@ -829,7 +961,13 @@ export default function ExpenseManager({ session, pageMode, defaultSubTab }: Exp
               disabled={loading}
               className="px-5 py-2.5 rounded-xl bg-white border border-slate-300 text-slate-900 text-xs font-semibold hover:bg-slate-50 hover:border-slate-400 disabled:opacity-50 active:scale-95 transition-all shadow-2xs whitespace-nowrap"
             >
-              {loading ? 'Recording...' : 'Record Purchase'}
+              {loading
+                ? 'Recording...'
+                : editingPurchaseId
+                ? 'Update Purchase'
+                : purchaseItems.length > 1
+                ? `Record ${purchaseItems.length} Purchases`
+                : 'Record Purchase'}
             </button>
           </>
         }
@@ -842,169 +980,223 @@ export default function ExpenseManager({ session, pageMode, defaultSubTab }: Exp
         )}
 
         <form id="purchase-form" onSubmit={handlePurchaseSubmit} className="space-y-4 text-xs">
-          <div>
-            <label className="block text-[11px] font-semibold text-slate-700 mb-1.5 uppercase tracking-wider">
-              Item Name *
-            </label>
-            <input
-              type="text"
-              required
-              value={purItem}
-              onChange={(e) => setPurItem(e.target.value)}
-              className="w-full px-3.5 py-2.5 rounded-xl bg-white border border-slate-200 text-xs text-slate-900 focus:border-slate-300 outline-none"
-            />
-          </div>
-
-          <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-            <div>
-              <label className="block text-[11px] font-semibold text-slate-700 mb-1.5 uppercase tracking-wider">
-                Category *
-              </label>
-              {purIsCustomCategory ? (
-                <div className="relative flex items-center">
-                  <input
-                    type="text"
-                    required
-                    autoFocus
-                    placeholder="Enter custom category..."
-                    value={purCategory}
-                    onChange={(e) => setPurCategory(e.target.value)}
-                    className="w-full pl-3.5 pr-9 py-2.5 rounded-xl bg-white border border-slate-200 text-xs text-slate-900 focus:border-slate-300 outline-none"
-                  />
+          {purchaseItems.map((item, index) => (
+            <div
+              key={item.id}
+              className={`p-4 rounded-2xl bg-white border ${
+                purchaseItems.length > 1
+                  ? 'border-slate-200/90 shadow-2xs space-y-3.5 bg-slate-50/20'
+                  : 'border-slate-100 space-y-3.5'
+              }`}
+            >
+              {purchaseItems.length > 1 && (
+                <div className="flex items-center justify-between pb-2 border-b border-slate-100">
+                  <span className="text-[11px] font-bold text-slate-700 uppercase tracking-wider">
+                    Purchase Item #{index + 1}
+                  </span>
                   <button
                     type="button"
-                    onClick={() => {
-                      setPurIsCustomCategory(false);
-                      setPurCategory('');
-                    }}
-                    title="Cancel and choose from list"
-                    className="absolute right-2 p-1.5 rounded-lg text-slate-400 hover:text-slate-600 hover:bg-slate-100 transition-colors"
+                    onClick={() => removePurchaseRow(index)}
+                    className="p-1.5 rounded-lg text-slate-400 hover:text-rose-600 hover:bg-rose-50 transition-colors"
+                    title="Remove Item"
                   >
-                    <X className="w-3.5 h-3.5" />
+                    <Trash2 className="w-3.5 h-3.5" />
                   </button>
                 </div>
-              ) : (
-                <CustomSelect
-                  value={purCategory}
-                  onChange={(val) => {
-                    if (val === 'OTHERS') {
-                      setPurIsCustomCategory(true);
-                      setPurCategory('');
-                    } else {
-                      setPurCategory(val);
-                    }
-                  }}
-                  options={purchaseCategoryOptions}
-                  placeholder="-- Select Category --"
-                  searchable={false}
-                />
               )}
-            </div>
 
-            <div>
-              <label className="block text-[11px] font-semibold text-slate-700 mb-1.5 uppercase tracking-wider">
-                Supplier Name
-              </label>
-              <input
-                type="text"
-                value={purSupplier}
-                onChange={(e) => setPurSupplier(e.target.value)}
-                className="w-full px-3.5 py-2.5 rounded-xl bg-white border border-slate-200 text-xs text-slate-900 focus:border-slate-300 outline-none"
-              />
-            </div>
-          </div>
+              <div>
+                <label className="block text-[11px] font-semibold text-slate-700 mb-1.5 uppercase tracking-wider">
+                  Item Name *
+                </label>
+                <input
+                  type="text"
+                  required
+                  placeholder="e.g. WNMG 080408 Inserts, Castrol Coolant..."
+                  value={item.itemName}
+                  onChange={(e) => updatePurchaseField(index, 'itemName', e.target.value)}
+                  className="w-full px-3.5 py-2.5 rounded-xl bg-white border border-slate-200 text-xs text-slate-900 focus:border-slate-300 outline-none"
+                />
+              </div>
 
-          <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
-            <div>
-              <label className="block text-[11px] font-semibold text-slate-700 mb-1.5 uppercase tracking-wider">
-                Quantity *
-              </label>
-              <input
-                type="number"
-                step="0.01"
-                min="0.01"
-                required
-                value={purQty}
-                onChange={(e) => setPurQty(parseFloat(e.target.value) || '')}
-                className="w-full px-3.5 py-2.5 rounded-xl bg-white border border-slate-200 text-xs text-slate-900 focus:border-slate-300 outline-none"
-              />
-            </div>
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                <div>
+                  <label className="block text-[11px] font-semibold text-slate-700 mb-1.5 uppercase tracking-wider">
+                    Category *
+                  </label>
+                  {item.isCustomCategory ? (
+                    <div className="relative flex items-center">
+                      <input
+                        type="text"
+                        required
+                        autoFocus
+                        placeholder="Enter custom category..."
+                        value={item.category}
+                        onChange={(e) => updatePurchaseField(index, 'category', e.target.value)}
+                        className="w-full pl-3.5 pr-9 py-2.5 rounded-xl bg-white border border-slate-200 text-xs text-slate-900 focus:border-slate-300 outline-none"
+                      />
+                      <button
+                        type="button"
+                        onClick={() => {
+                          updatePurchaseField(index, 'isCustomCategory', false);
+                          updatePurchaseField(index, 'category', '');
+                        }}
+                        title="Cancel and choose from list"
+                        className="absolute right-2 p-1.5 rounded-lg text-slate-400 hover:text-slate-600 hover:bg-slate-100 transition-colors"
+                      >
+                        <X className="w-3.5 h-3.5" />
+                      </button>
+                    </div>
+                  ) : (
+                    <CustomSelect
+                      value={item.category}
+                      onChange={(val) => {
+                        if (val === 'OTHERS') {
+                          updatePurchaseField(index, 'isCustomCategory', true);
+                          updatePurchaseField(index, 'category', '');
+                        } else {
+                          updatePurchaseField(index, 'category', val);
+                        }
+                      }}
+                      options={purchaseCategoryOptions}
+                      placeholder="-- Select Category --"
+                      searchable={false}
+                    />
+                  )}
+                </div>
 
-            <div>
-              <label className="block text-[11px] font-semibold text-slate-700 mb-1.5 uppercase tracking-wider">
-                Unit *
-              </label>
-              <CustomUnitSelect
-                value={purUom}
-                onChange={(val) => setPurUom(val)}
-                placeholder="-- Select Unit --"
-              />
-            </div>
+                <div>
+                  <label className="block text-[11px] font-semibold text-slate-700 mb-1.5 uppercase tracking-wider">
+                    Supplier Name
+                  </label>
+                  <input
+                    type="text"
+                    placeholder="e.g. Tools India, Local Spares..."
+                    value={item.supplierName}
+                    onChange={(e) => updatePurchaseField(index, 'supplierName', e.target.value)}
+                    className="w-full px-3.5 py-2.5 rounded-xl bg-white border border-slate-200 text-xs text-slate-900 focus:border-slate-300 outline-none"
+                  />
+                </div>
+              </div>
 
-            <div>
-              <label className="block text-[11px] font-semibold text-slate-700 mb-1.5 uppercase tracking-wider">
-                Unit Price *
-              </label>
-              <input
-                type="number"
-                step="0.01"
-                min="0"
-                required
-                value={purPrice}
-                onChange={(e) => setPurPrice(parseFloat(e.target.value) || '')}
-                className="w-full px-3.5 py-2.5 rounded-xl bg-white border border-slate-200 text-xs text-slate-900 focus:border-slate-300 outline-none"
-              />
-            </div>
-          </div>
+              <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
+                <div>
+                  <label className="block text-[11px] font-semibold text-slate-700 mb-1.5 uppercase tracking-wider">
+                    Quantity *
+                  </label>
+                  <input
+                    type="number"
+                    step="0.01"
+                    min="0.01"
+                    required
+                    placeholder="0"
+                    value={item.quantity}
+                    onChange={(e) => updatePurchaseField(index, 'quantity', parseFloat(e.target.value) || '')}
+                    className="w-full px-3.5 py-2.5 rounded-xl bg-white border border-slate-200 text-xs text-slate-900 focus:border-slate-300 outline-none"
+                  />
+                </div>
 
-          <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
-            <div>
-              <label className="block text-[11px] font-semibold text-slate-700 mb-1.5 uppercase tracking-wider">
-                Bill Number
-              </label>
-              <input
-                type="text"
-                value={purBillNo}
-                onChange={(e) => setPurBillNo(e.target.value)}
-                className="w-full px-3.5 py-2.5 rounded-xl bg-white border border-slate-200 text-xs text-slate-900 font-mono focus:border-slate-300 outline-none"
-              />
-            </div>
+                <div>
+                  <label className="block text-[11px] font-semibold text-slate-700 mb-1.5 uppercase tracking-wider">
+                    Unit *
+                  </label>
+                  <CustomUnitSelect
+                    value={item.uom}
+                    onChange={(val) => updatePurchaseField(index, 'uom', val)}
+                    placeholder="-- Select Unit --"
+                  />
+                </div>
 
-            <div>
-              <label className="block text-[11px] font-semibold text-slate-700 mb-1.5 uppercase tracking-wider">
-                Payment Status *
-              </label>
-              <CustomSelect
-                value={purStatus}
-                onChange={(val) => setPurStatus(val)}
-                options={[
-                  { value: 'PAID', label: 'Paid' },
-                  { value: 'PENDING', label: 'Pending' },
-                ]}
-                searchable={false}
-              />
-            </div>
+                <div>
+                  <label className="block text-[11px] font-semibold text-slate-700 mb-1.5 uppercase tracking-wider">
+                    Unit Price *
+                  </label>
+                  <input
+                    type="number"
+                    step="0.01"
+                    min="0"
+                    required
+                    placeholder="₹ 0.00"
+                    value={item.unitPrice}
+                    onChange={(e) => updatePurchaseField(index, 'unitPrice', parseFloat(e.target.value) || '')}
+                    className="w-full px-3.5 py-2.5 rounded-xl bg-white border border-slate-200 text-xs text-slate-900 focus:border-slate-300 outline-none"
+                  />
+                </div>
+              </div>
 
-            <div>
-              <label className="block text-[11px] font-semibold text-slate-700 mb-1.5 uppercase tracking-wider">
-                Purchase Date *
-              </label>
-              <CustomDatePicker
-                value={purDate}
-                onChange={setPurDate}
-                required
-              />
-            </div>
-          </div>
+              <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
+                <div>
+                  <label className="block text-[11px] font-semibold text-slate-700 mb-1.5 uppercase tracking-wider">
+                    Bill Number
+                  </label>
+                  <input
+                    type="text"
+                    placeholder="Bill #"
+                    value={item.supplierBillNo}
+                    onChange={(e) => updatePurchaseField(index, 'supplierBillNo', e.target.value)}
+                    className="w-full px-3.5 py-2.5 rounded-xl bg-white border border-slate-200 text-xs text-slate-900 font-mono focus:border-slate-300 outline-none"
+                  />
+                </div>
 
-          {purQty && purPrice ? (
-            <div className="p-3.5 rounded-xl bg-slate-50 border border-slate-200 flex justify-between font-medium">
-              <span className="text-slate-600">Total Purchase Value:</span>
-              <span className="font-semibold text-slate-950">
-                ₹{(Number(purQty) * Number(purPrice)).toLocaleString('en-IN', { minimumFractionDigits: 2 })}
+                <div>
+                  <label className="block text-[11px] font-semibold text-slate-700 mb-1.5 uppercase tracking-wider">
+                    Payment Status *
+                  </label>
+                  <CustomSelect
+                    value={item.paymentStatus}
+                    onChange={(val) => updatePurchaseField(index, 'paymentStatus', val)}
+                    options={[
+                      { value: 'PAID', label: 'Paid' },
+                      { value: 'PENDING', label: 'Pending' },
+                    ]}
+                    searchable={false}
+                  />
+                </div>
+
+                <div>
+                  <label className="block text-[11px] font-semibold text-slate-700 mb-1.5 uppercase tracking-wider">
+                    Purchase Date *
+                  </label>
+                  <CustomDatePicker
+                    value={item.purchaseDate}
+                    onChange={(val) => updatePurchaseField(index, 'purchaseDate', val)}
+                    required
+                  />
+                </div>
+              </div>
+
+              {item.quantity && item.unitPrice ? (
+                <div className="p-2.5 rounded-xl bg-slate-50 border border-slate-200 flex justify-between text-xs font-medium">
+                  <span className="text-slate-500">Item Subtotal:</span>
+                  <span className="font-semibold text-slate-900">
+                    ₹{(Number(item.quantity) * Number(item.unitPrice)).toLocaleString('en-IN', { minimumFractionDigits: 2 })}
+                  </span>
+                </div>
+              ) : null}
+            </div>
+          ))}
+
+          {!editingPurchaseId && (
+            <button
+              type="button"
+              onClick={addPurchaseRow}
+              className="w-full flex items-center justify-center gap-2 py-3 rounded-2xl border-2 border-dashed border-slate-200 hover:border-slate-400 bg-slate-50/60 hover:bg-slate-50 text-xs font-semibold text-slate-700 hover:text-slate-900 transition-all active:scale-[0.99]"
+            >
+              <Plus className="w-4 h-4 text-slate-500" />
+              <span>+ Add Another Purchase</span>
+            </button>
+          )}
+
+          {totalPurchaseValue > 0 && (
+            <div className="p-3.5 rounded-xl bg-slate-100/70 border border-slate-200 flex justify-between font-medium">
+              <span className="text-slate-700 font-semibold">
+                {purchaseItems.length > 1 ? `Grand Total (${purchaseItems.length} items):` : 'Total Purchase Value:'}
+              </span>
+              <span className="font-bold text-slate-950 text-sm">
+                ₹{totalPurchaseValue.toLocaleString('en-IN', { minimumFractionDigits: 2 })}
               </span>
             </div>
-          ) : null}
+          )}
         </form>
       </SlideOverDrawer>
 
@@ -1029,7 +1221,13 @@ export default function ExpenseManager({ session, pageMode, defaultSubTab }: Exp
               disabled={loading}
               className="px-5 py-2.5 rounded-xl bg-white border border-slate-300 text-slate-900 text-xs font-semibold hover:bg-slate-50 hover:border-slate-400 disabled:opacity-50 active:scale-95 transition-all shadow-2xs whitespace-nowrap"
             >
-              {loading ? 'Recording...' : 'Record Expense'}
+              {loading
+                ? 'Recording...'
+                : editingExpenseId
+                ? 'Update Expense'
+                : expenseItems.length > 1
+                ? `Record ${expenseItems.length} Expenses`
+                : 'Record Expense'}
             </button>
           </>
         }
@@ -1042,123 +1240,175 @@ export default function ExpenseManager({ session, pageMode, defaultSubTab }: Exp
         )}
 
         <form id="expense-form" onSubmit={handleExpenseSubmit} className="space-y-4 text-xs">
-          <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-            <div>
-              <label className="block text-[11px] font-semibold text-slate-700 mb-1.5 uppercase tracking-wider">
-                Category *
-              </label>
-              {expIsCustomCategory ? (
-                <div className="relative flex items-center">
-                  <input
-                    type="text"
-                    required
-                    autoFocus
-                    placeholder="Enter custom expense category..."
-                    value={expCategory}
-                    onChange={(e) => setExpCategory(e.target.value)}
-                    className="w-full pl-3.5 pr-9 py-2.5 rounded-xl bg-white border border-slate-200 text-xs text-slate-900 focus:border-slate-300 outline-none"
-                  />
+          {expenseItems.map((item, index) => (
+            <div
+              key={item.id}
+              className={`p-4 rounded-2xl bg-white border ${
+                expenseItems.length > 1
+                  ? 'border-slate-200/90 shadow-2xs space-y-3.5 bg-slate-50/20'
+                  : 'border-slate-100 space-y-3.5'
+              }`}
+            >
+              {expenseItems.length > 1 && (
+                <div className="flex items-center justify-between pb-2 border-b border-slate-100">
+                  <span className="text-[11px] font-bold text-slate-700 uppercase tracking-wider">
+                    Expense Item #{index + 1}
+                  </span>
                   <button
                     type="button"
-                    onClick={() => {
-                      setExpIsCustomCategory(false);
-                      setExpCategory('');
-                    }}
-                    title="Cancel and choose from list"
-                    className="absolute right-2 p-1.5 rounded-lg text-slate-400 hover:text-slate-600 hover:bg-slate-100 transition-colors"
+                    onClick={() => removeExpenseRow(index)}
+                    className="p-1.5 rounded-lg text-slate-400 hover:text-rose-600 hover:bg-rose-50 transition-colors"
+                    title="Remove Expense"
                   >
-                    <X className="w-3.5 h-3.5" />
+                    <Trash2 className="w-3.5 h-3.5" />
                   </button>
                 </div>
-              ) : (
-                <CustomSelect
-                  value={expCategory}
-                  onChange={(val) => {
-                    if (val === 'OTHERS') {
-                      setExpIsCustomCategory(true);
-                      setExpCategory('');
-                    } else {
-                      setExpCategory(val);
-                    }
-                  }}
-                  options={expenseCategoryOptions}
-                  placeholder="-- Select Category --"
-                  searchable={false}
-                />
               )}
-            </div>
 
-            <div>
-              <label className="block text-[11px] font-semibold text-slate-700 mb-1.5 uppercase tracking-wider">
-                Amount (₹) *
-              </label>
-              <input
-                type="number"
-                step="0.01"
-                min="1"
-                required
-                value={expAmount}
-                onChange={(e) => setExpAmount(parseFloat(e.target.value) || '')}
-                className="w-full px-3.5 py-2.5 rounded-xl bg-white border border-slate-200 text-xs font-semibold text-slate-900 focus:border-slate-300 outline-none"
-              />
-            </div>
-          </div>
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                <div>
+                  <label className="block text-[11px] font-semibold text-slate-700 mb-1.5 uppercase tracking-wider">
+                    Category *
+                  </label>
+                  {item.isCustomCategory ? (
+                    <div className="relative flex items-center">
+                      <input
+                        type="text"
+                        required
+                        autoFocus
+                        placeholder="Enter custom expense category..."
+                        value={item.category}
+                        onChange={(e) => updateExpenseField(index, 'category', e.target.value)}
+                        className="w-full pl-3.5 pr-9 py-2.5 rounded-xl bg-white border border-slate-200 text-xs text-slate-900 focus:border-slate-300 outline-none"
+                      />
+                      <button
+                        type="button"
+                        onClick={() => {
+                          updateExpenseField(index, 'isCustomCategory', false);
+                          updateExpenseField(index, 'category', '');
+                        }}
+                        title="Cancel and choose from list"
+                        className="absolute right-2 p-1.5 rounded-lg text-slate-400 hover:text-slate-600 hover:bg-slate-100 transition-colors"
+                      >
+                        <X className="w-3.5 h-3.5" />
+                      </button>
+                    </div>
+                  ) : (
+                    <CustomSelect
+                      value={item.category}
+                      onChange={(val) => {
+                        if (val === 'OTHERS') {
+                          updateExpenseField(index, 'isCustomCategory', true);
+                          updateExpenseField(index, 'category', '');
+                        } else {
+                          updateExpenseField(index, 'category', val);
+                        }
+                      }}
+                      options={expenseCategoryOptions}
+                      placeholder="-- Select Category --"
+                      searchable={false}
+                    />
+                  )}
+                </div>
 
-          <div>
-            <label className="block text-[11px] font-semibold text-slate-700 mb-1.5 uppercase tracking-wider">
-              Description *
-            </label>
-            <input
-              type="text"
-              required
-              value={expDesc}
-              onChange={(e) => setExpDesc(e.target.value)}
-              className="w-full px-3.5 py-2.5 rounded-xl bg-white border border-slate-200 text-xs text-slate-900 focus:border-slate-300 outline-none"
-            />
-          </div>
+                <div>
+                  <label className="block text-[11px] font-semibold text-slate-700 mb-1.5 uppercase tracking-wider">
+                    Amount (₹) *
+                  </label>
+                  <input
+                    type="number"
+                    step="0.01"
+                    min="1"
+                    required
+                    placeholder="₹ 0.00"
+                    value={item.amount}
+                    onChange={(e) => updateExpenseField(index, 'amount', parseFloat(e.target.value) || '')}
+                    className="w-full px-3.5 py-2.5 rounded-xl bg-white border border-slate-200 text-xs font-semibold text-slate-900 focus:border-slate-300 outline-none"
+                  />
+                </div>
+              </div>
 
-          <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
-            <div>
-              <label className="block text-[11px] font-semibold text-slate-700 mb-1.5 uppercase tracking-wider">
-                Date *
-              </label>
-              <CustomDatePicker
-                value={expDate}
-                onChange={setExpDate}
-                required
-              />
-            </div>
+              <div>
+                <label className="block text-[11px] font-semibold text-slate-700 mb-1.5 uppercase tracking-wider">
+                  Description *
+                </label>
+                <input
+                  type="text"
+                  required
+                  placeholder="e.g. October EB meter bill, lathe lubrication..."
+                  value={item.description}
+                  onChange={(e) => updateExpenseField(index, 'description', e.target.value)}
+                  className="w-full px-3.5 py-2.5 rounded-xl bg-white border border-slate-200 text-xs text-slate-900 focus:border-slate-300 outline-none"
+                />
+              </div>
 
-            <div>
-              <label className="block text-[11px] font-semibold text-slate-700 mb-1.5 uppercase tracking-wider">
-                Payment Mode
-              </label>
-              <CustomSelect
-                value={expMode}
-                onChange={(val) => setExpMode(val)}
-                options={[
-                  { value: 'Net Banking', label: 'Net Banking' },
-                  { value: 'UPI', label: 'UPI' },
-                  { value: 'Cash', label: 'Cash' },
-                  { value: 'Cheque', label: 'Cheque' },
-                ]}
-                placeholder="-- Select Payment Mode --"
-                searchable={false}
-              />
-            </div>
+              <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
+                <div>
+                  <label className="block text-[11px] font-semibold text-slate-700 mb-1.5 uppercase tracking-wider">
+                    Date *
+                  </label>
+                  <CustomDatePicker
+                    value={item.expenseDate}
+                    onChange={(val) => updateExpenseField(index, 'expenseDate', val)}
+                    required
+                  />
+                </div>
 
-            <div>
-              <label className="block text-[11px] font-semibold text-slate-700 mb-1.5 uppercase tracking-wider">
-                Ref / Receipt No
-              </label>
-              <input
-                type="text"
-                value={expRefNo}
-                onChange={(e) => setExpRefNo(e.target.value)}
-                className="w-full px-3.5 py-2.5 rounded-xl bg-white border border-slate-200 text-xs text-slate-900 font-mono focus:border-slate-300 outline-none"
-              />
+                <div>
+                  <label className="block text-[11px] font-semibold text-slate-700 mb-1.5 uppercase tracking-wider">
+                    Payment Mode
+                  </label>
+                  <CustomSelect
+                    value={item.paymentMode}
+                    onChange={(val) => updateExpenseField(index, 'paymentMode', val)}
+                    options={[
+                      { value: 'Net Banking', label: 'Net Banking' },
+                      { value: 'UPI', label: 'UPI' },
+                      { value: 'Cash', label: 'Cash' },
+                      { value: 'Cheque', label: 'Cheque' },
+                    ]}
+                    placeholder="-- Select Payment Mode --"
+                    searchable={false}
+                  />
+                </div>
+
+                <div>
+                  <label className="block text-[11px] font-semibold text-slate-700 mb-1.5 uppercase tracking-wider">
+                    Ref / Receipt No
+                  </label>
+                  <input
+                    type="text"
+                    placeholder="Receipt / UTR #"
+                    value={item.referenceNo}
+                    onChange={(e) => updateExpenseField(index, 'referenceNo', e.target.value)}
+                    className="w-full px-3.5 py-2.5 rounded-xl bg-white border border-slate-200 text-xs text-slate-900 font-mono focus:border-slate-300 outline-none"
+                  />
+                </div>
+              </div>
             </div>
-          </div>
+          ))}
+
+          {!editingExpenseId && (
+            <button
+              type="button"
+              onClick={addExpenseRow}
+              className="w-full flex items-center justify-center gap-2 py-3 rounded-2xl border-2 border-dashed border-slate-200 hover:border-slate-400 bg-slate-50/60 hover:bg-slate-50 text-xs font-semibold text-slate-700 hover:text-slate-900 transition-all active:scale-[0.99]"
+            >
+              <Plus className="w-4 h-4 text-slate-500" />
+              <span>+ Add Another Expense</span>
+            </button>
+          )}
+
+          {totalExpenseValue > 0 && (
+            <div className="p-3.5 rounded-xl bg-slate-100/70 border border-slate-200 flex justify-between font-medium">
+              <span className="text-slate-700 font-semibold">
+                {expenseItems.length > 1 ? `Grand Total (${expenseItems.length} expenses):` : 'Total Expense Amount:'}
+              </span>
+              <span className="font-bold text-slate-950 text-sm">
+                ₹{totalExpenseValue.toLocaleString('en-IN', { minimumFractionDigits: 2 })}
+              </span>
+            </div>
+          )}
         </form>
       </SlideOverDrawer>
 

@@ -54,6 +54,7 @@ export default function ApprovalsManager({ session }: ApprovalsManagerProps) {
         const data = await res.json();
         setCounts(data.counts || { total: 0, dailyWork: 0, attendance: 0, overtime: 0, shifts: 0 });
         setItems(data.items || { dailyWork: [], attendance: [], overtime: [], shifts: [] });
+        window.dispatchEvent(new Event('svt_approvals_updated'));
       }
     } catch (e) {
       console.error(e);

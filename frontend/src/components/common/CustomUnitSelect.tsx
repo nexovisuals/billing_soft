@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { CustomSelect } from './CustomSelect';
-import { Check, X } from 'lucide-react';
+import { X } from 'lucide-react';
 
 interface CustomUnitSelectProps {
   value: string;
@@ -56,7 +56,6 @@ export const CustomUnitSelect: React.FC<CustomUnitSelectProps> = ({
 }) => {
   const [savedUnits, setSavedUnits] = useState<string[]>(() => getSavedCustomUnits());
   const [isTypingCustom, setIsTypingCustom] = useState(false);
-  const [customInput, setCustomInput] = useState('');
 
   // Sync custom units from other components or updates
   useEffect(() => {
@@ -70,59 +69,32 @@ export const CustomUnitSelect: React.FC<CustomUnitSelectProps> = ({
   const handleSelectChange = (selected: string) => {
     if (selected === 'OTHERS') {
       setIsTypingCustom(true);
-      setCustomInput('');
+      onChange('');
     } else {
       setIsTypingCustom(false);
       onChange(selected);
     }
   };
 
-  const handleConfirmCustom = () => {
-    const clean = customInput.trim().toLowerCase();
-    if (clean) {
-      saveCustomUnit(clean);
-      setSavedUnits(getSavedCustomUnits());
-      setIsTypingCustom(false);
-      onChange(clean);
-    }
-  };
-
   if (isTypingCustom) {
     return (
-      <div className={`flex items-center gap-1.5 ${className}`}>
+      <div className={`relative flex items-center ${className}`}>
         <input
           type="text"
-          value={customInput}
-          onChange={(e) => setCustomInput(e.target.value)}
-          onKeyDown={(e) => {
-            if (e.key === 'Enter') {
-              e.preventDefault();
-              handleConfirmCustom();
-            }
-          }}
+          value={value}
+          onChange={(e) => onChange(e.target.value)}
           autoFocus
-          placeholder="Type custom unit..."
-          className="w-full px-3 py-2 rounded-xl border border-slate-300 text-xs text-slate-800 font-normal focus:border-slate-400 outline-none shadow-xs"
+          placeholder="Enter custom unit..."
+          className="w-full pl-3.5 pr-9 py-2.5 rounded-xl bg-white border border-slate-200 text-xs text-slate-900 focus:border-slate-300 outline-none"
         />
-        <button
-          type="button"
-          onClick={handleConfirmCustom}
-          disabled={!customInput.trim()}
-          title="Save Unit"
-          className="px-2.5 py-2 rounded-xl bg-slate-900 text-white text-xs font-medium hover:bg-slate-800 disabled:opacity-40 transition-colors shrink-0 flex items-center gap-1"
-        >
-          <Check className="w-3.5 h-3.5" />
-          <span>Save</span>
-        </button>
         <button
           type="button"
           onClick={() => {
             setIsTypingCustom(false);
-            setCustomInput('');
             onChange('');
           }}
           title="Cancel and choose from list"
-          className="p-2 rounded-xl border border-slate-200 text-slate-500 hover:bg-slate-50 transition-colors shrink-0"
+          className="absolute right-2 p-1.5 rounded-lg text-slate-400 hover:text-slate-600 hover:bg-slate-100 transition-colors"
         >
           <X className="w-3.5 h-3.5" />
         </button>
