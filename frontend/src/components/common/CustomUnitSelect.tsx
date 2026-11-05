@@ -9,14 +9,43 @@ interface CustomUnitSelectProps {
   className?: string;
 }
 
-const STANDARD_UNITS = [
-  { value: 'kg', label: 'kg (Kilograms)' },
-  { value: 'nos', label: 'nos (Numbers)' },
-  { value: 'pcs', label: 'pcs (Pieces)' },
-  { value: 'sets', label: 'sets (Sets)' },
-  { value: 'meters', label: 'meters (Meters)' },
-  { value: 'tonnes', label: 'tonnes (Tonnes)' },
-  { value: 'OTHERS', label: '+ Others (Type Custom Unit...)' },
+const STORAGE_KEY_CUSTOM_UNITS = 'svt_custom_units';
+
+export const getSavedCustomUnits = (): string[] => {
+  try {
+    const raw = localStorage.getItem(STORAGE_KEY_CUSTOM_UNITS);
+    if (!raw) return [];
+    const parsed = JSON.parse(raw);
+    return Array.isArray(parsed) ? parsed : [];
+  } catch {
+    return [];
+  }
+};
+
+export const saveCustomUnit = (unit: string) => {
+  if (!unit || !unit.trim()) return;
+  const clean = unit.trim().toLowerCase();
+  const defaults = ['kg', 'nos', 'pcs', 'sets', 'meters', 'tonnes', 'others'];
+  if (defaults.includes(clean)) return;
+  try {
+    const existing = getSavedCustomUnits();
+    if (!existing.some((u) => u.toLowerCase() === clean)) {
+      const updated = [...existing, clean];
+      localStorage.setItem(STORAGE_KEY_CUSTOM_UNITS, JSON.stringify(updated));
+      window.dispatchEvent(new Event('svt_custom_units_updated'));
+    }
+  } catch (e) {
+    console.error('Failed to save custom unit', e);
+  }
+};
+
+const DEFAULT_UNITS = [
+  { value: 'kg', label: 'kg' },
+  { value: 'nos', label: 'nos' },
+  { value: 'pcs', label: 'pcs' },
+  { value: 'sets', label: 'sets' },
+  { value: 'meters', label: 'meters' },
+  { value: 'tonnes', label: 'tonnes' },
 ];
 
 export const CustomUnitSelect: React.FC<CustomUnitSelectProps> = ({
@@ -25,19 +54,18 @@ export const CustomUnitSelect: React.FC<CustomUnitSelectProps> = ({
   placeholder = '-- Select Unit --',
   className = '',
 }) => {
-  const isCustom = Boolean(
-    value && !STANDARD_UNITS.some((u) => u.value.toLowerCase() === value.toLowerCase() && u.value !== 'OTHERS')
-  );
+  const [savedUnits, setSavedUnits] = useState<string[]>(() => getSavedCustomUnits());
+  const [isTypingCustom, setIsTypingCustom] = useState(false);
+  const [customInput, setCustomInput] = useState('');
 
-  const [isTypingCustom, setIsTypingCustom] = useState(isCustom);
-  const [customInput, setCustomInput] = useState(isCustom ? value : '');
-
+  // Sync custom units from other components or updates
   useEffect(() => {
-    if (isCustom) {
-      setIsTypingCustom(true);
-      setCustomInput(value);
-    }
-  }, [value, isCustom]);
+    const handleUpdate = () => {
+      setSavedUnits(getSavedCustomUnits());
+    };
+    window.addEventListener('svt_custom_units_updated', handleUpdate);
+    return () => window.removeEventListener('svt_custom_units_updated', handleUpdate);
+  }, []);
 
   const handleSelectChange = (selected: string) => {
     if (selected === 'OTHERS') {
@@ -50,8 +78,12 @@ export const CustomUnitSelect: React.FC<CustomUnitSelectProps> = ({
   };
 
   const handleConfirmCustom = () => {
-    if (customInput.trim()) {
-      onChange(customInput.trim().toLowerCase());
+    const clean = customInput.trim().toLowerCase();
+    if (clean) {
+      saveCustomUnit(clean);
+      setSavedUnits(getSavedCustomUnits());
+      setIsTypingCustom(false);
+      onChange(clean);
     }
   };
 
@@ -69,27 +101,27 @@ export const CustomUnitSelect: React.FC<CustomUnitSelectProps> = ({
             }
           }}
           autoFocus
+          placeholder="Type custom unit..."
           className="w-full px-3 py-2 rounded-xl border border-slate-300 text-xs text-slate-800 font-normal focus:border-slate-400 outline-none shadow-xs"
         />
         <button
           type="button"
           onClick={handleConfirmCustom}
           disabled={!customInput.trim()}
-          title="Confirm Unit"
+          title="Save Unit"
           className="px-2.5 py-2 rounded-xl bg-slate-900 text-white text-xs font-medium hover:bg-slate-800 disabled:opacity-40 transition-colors shrink-0 flex items-center gap-1"
         >
           <Check className="w-3.5 h-3.5" />
-          <span>Set</span>
+          <span>Save</span>
         </button>
         <button
           type="button"
           onClick={() => {
             setIsTypingCustom(false);
-            if (isCustom) {
-              onChange('');
-            }
+            setCustomInput('');
+            onChange('');
           }}
-          title="Cancel custom unit"
+          title="Cancel and choose from list"
           className="p-2 rounded-xl border border-slate-200 text-slate-500 hover:bg-slate-50 transition-colors shrink-0"
         >
           <X className="w-3.5 h-3.5" />
@@ -98,16 +130,29 @@ export const CustomUnitSelect: React.FC<CustomUnitSelectProps> = ({
     );
   }
 
-  // Ensure current value is displayed even if it was previously entered as a custom unit
-  const optionsWithCustom = isCustom && value
-    ? [{ value, label: `${value} (Custom)` }, ...STANDARD_UNITS]
-    : STANDARD_UNITS;
+  // Combine default units + saved custom units (without any duplicates)
+  const isDefault = DEFAULT_UNITS.some((u) => u.value.toLowerCase() === (value || '').toLowerCase());
+  const isSavedCustom = savedUnits.some((u) => u.toLowerCase() === (value || '').toLowerCase());
+  const isAdhocCustom = Boolean(value && !isDefault && !isSavedCustom && value !== 'OTHERS');
+
+  const customOptions = savedUnits
+    .filter((u) => !DEFAULT_UNITS.some((d) => d.value.toLowerCase() === u.toLowerCase()))
+    .map((u) => ({ value: u, label: u }));
+
+  const adhocOption = isAdhocCustom ? [{ value, label: value }] : [];
+
+  const combinedOptions = [
+    ...DEFAULT_UNITS,
+    ...customOptions,
+    ...adhocOption,
+    { value: 'OTHERS', label: 'Others' },
+  ];
 
   return (
     <CustomSelect
       value={value}
       onChange={handleSelectChange}
-      options={optionsWithCustom}
+      options={combinedOptions}
       placeholder={placeholder}
       className={className}
       searchable={false}

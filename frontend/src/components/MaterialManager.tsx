@@ -16,7 +16,7 @@ import {
 } from 'lucide-react';
 import { UserSession } from '../types';
 import SlideOverDrawer from './common/SlideOverDrawer';
-import CustomUnitSelect from './common/CustomUnitSelect';
+import CustomUnitSelect, { saveCustomUnit } from './common/CustomUnitSelect';
 
 interface Material {
   id: string;
@@ -134,9 +134,17 @@ export default function MaterialManager({ session }: MaterialManagerProps) {
       setFormError('Product / component name is required.');
       return;
     }
+    if (!formData.uom.trim()) {
+      setFormError('Please select a unit of measurement.');
+      return;
+    }
 
     try {
       setFormError(null);
+      if (formData.uom) {
+        saveCustomUnit(formData.uom);
+      }
+
       const url = editingMaterial
         ? `${API_BASE_URL}/api/materials/${editingMaterial.id}`
         : `${API_BASE_URL}/api/materials`;

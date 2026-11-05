@@ -1,5 +1,5 @@
 import { API_BASE_URL } from '../config';
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useMemo } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import {
   ShoppingBag,
@@ -17,7 +17,7 @@ import {
 import { UserSession } from '../types';
 import SlideOverDrawer from './common/SlideOverDrawer';
 import CustomSelect from './common/CustomSelect';
-import CustomUnitSelect from './common/CustomUnitSelect';
+import CustomUnitSelect, { saveCustomUnit } from './common/CustomUnitSelect';
 import CustomDatePicker from './common/CustomDatePicker';
 
 interface PurchaseItem {
@@ -52,23 +52,78 @@ interface ExpenseManagerProps {
   defaultSubTab?: 'purchases' | 'operating';
 }
 
-const STANDARD_PURCHASE_CATEGORIES = [
+const STORAGE_KEY_CUSTOM_PURCHASE_CATS = 'svt_custom_purchase_categories';
+const STORAGE_KEY_CUSTOM_EXPENSE_CATS = 'svt_custom_expense_categories';
+
+export const getSavedCustomPurchaseCategories = (): string[] => {
+  try {
+    const raw = localStorage.getItem(STORAGE_KEY_CUSTOM_PURCHASE_CATS);
+    if (!raw) return [];
+    const parsed = JSON.parse(raw);
+    return Array.isArray(parsed) ? parsed : [];
+  } catch {
+    return [];
+  }
+};
+
+export const saveCustomPurchaseCategory = (cat: string) => {
+  if (!cat || !cat.trim()) return;
+  const clean = cat.trim();
+  const defaults = ['Tooling', 'Oil & Coolant', 'Machine Spares', 'Consumables', 'Hardware', 'Others'];
+  if (defaults.some(d => d.toLowerCase() === clean.toLowerCase())) return;
+  try {
+    const existing = getSavedCustomPurchaseCategories();
+    if (!existing.some(c => c.toLowerCase() === clean.toLowerCase())) {
+      const updated = [...existing, clean];
+      localStorage.setItem(STORAGE_KEY_CUSTOM_PURCHASE_CATS, JSON.stringify(updated));
+    }
+  } catch (e) {
+    console.error('Failed to save custom purchase category', e);
+  }
+};
+
+export const getSavedCustomExpenseCategories = (): string[] => {
+  try {
+    const raw = localStorage.getItem(STORAGE_KEY_CUSTOM_EXPENSE_CATS);
+    if (!raw) return [];
+    const parsed = JSON.parse(raw);
+    return Array.isArray(parsed) ? parsed : [];
+  } catch {
+    return [];
+  }
+};
+
+export const saveCustomExpenseCategory = (cat: string) => {
+  if (!cat || !cat.trim()) return;
+  const clean = cat.trim();
+  const defaults = ['Electricity (EB)', 'Workshop Rent', 'Machine Maintenance', 'Transport & Diesel', 'Staff Welfare & Tea', 'Office & Admin', 'Others'];
+  if (defaults.some(d => d.toLowerCase() === clean.toLowerCase())) return;
+  try {
+    const existing = getSavedCustomExpenseCategories();
+    if (!existing.some(c => c.toLowerCase() === clean.toLowerCase())) {
+      const updated = [...existing, clean];
+      localStorage.setItem(STORAGE_KEY_CUSTOM_EXPENSE_CATS, JSON.stringify(updated));
+    }
+  } catch (e) {
+    console.error('Failed to save custom expense category', e);
+  }
+};
+
+const DEFAULT_PURCHASE_CATEGORIES = [
   { value: 'Tooling', label: 'Tooling' },
-  { value: 'Coolant/Oil', label: 'Oil & Coolant' },
-  { value: 'Spares', label: 'Machine Spares' },
+  { value: 'Oil & Coolant', label: 'Oil & Coolant' },
+  { value: 'Machine Spares', label: 'Machine Spares' },
   { value: 'Consumables', label: 'Consumables' },
   { value: 'Hardware', label: 'Hardware' },
-  { value: 'OTHERS', label: 'Others' },
 ];
 
-const STANDARD_EXPENSE_CATEGORIES = [
-  { value: 'Electricity (EB)', label: 'Electricity (EB Power)' },
+const DEFAULT_EXPENSE_CATEGORIES = [
+  { value: 'Electricity (EB)', label: 'Electricity (EB)' },
   { value: 'Workshop Rent', label: 'Workshop Rent' },
-  { value: 'Machine Maintenance', label: 'Machine Maintenance & Repairs' },
-  { value: 'Transport/Diesel', label: 'Transport & Diesel' },
-  { value: 'Tea & Refreshments', label: 'Staff Welfare & Tea' },
-  { value: 'Office & Admin', label: 'Office & Administration' },
-  { value: 'OTHERS', label: 'Others' },
+  { value: 'Machine Maintenance', label: 'Machine Maintenance' },
+  { value: 'Transport & Diesel', label: 'Transport & Diesel' },
+  { value: 'Staff Welfare & Tea', label: 'Staff Welfare & Tea' },
+  { value: 'Office & Admin', label: 'Office & Admin' },
 ];
 
 export default function ExpenseManager({ session, pageMode, defaultSubTab }: ExpenseManagerProps) {
@@ -80,6 +135,9 @@ export default function ExpenseManager({ session, pageMode, defaultSubTab }: Exp
     totalOperating: 0,
     totalOutflow: 0,
   });
+
+  const [savedPurCategories, setSavedPurCategories] = useState<string[]>(() => getSavedCustomPurchaseCategories());
+  const [savedExpCategories, setSavedExpCategories] = useState<string[]>(() => getSavedCustomExpenseCategories());
 
   const [searchTerm, setSearchTerm] = useState('');
   const [categoryFilter, _setCategoryFilter] = useState('ALL');
@@ -93,26 +151,26 @@ export default function ExpenseManager({ session, pageMode, defaultSubTab }: Exp
   const [formError, setFormError] = useState<string | null>(null);
   const [notification, setNotification] = useState<{ type: 'success' | 'error'; message: string } | null>(null);
 
-  // Purchase Form Fields
+  // Purchase Form Fields - Start empty by default
   const [purSupplier, setPurSupplier] = useState('');
   const [purItem, setPurItem] = useState('');
-  const [purCategory, setPurCategory] = useState('Tooling');
+  const [purCategory, setPurCategory] = useState('');
   const [purIsCustomCategory, setPurIsCustomCategory] = useState(false);
   const [purQty, setPurQty] = useState<number | ''>('');
-  const [purUom, setPurUom] = useState('pcs');
+  const [purUom, setPurUom] = useState('');
   const [purPrice, setPurPrice] = useState<number | ''>('');
   const [purBillNo, setPurBillNo] = useState('');
   const [purStatus, setPurStatus] = useState('PAID');
   const [purDate, setPurDate] = useState(new Date().toISOString().split('T')[0]);
   const [purRemarks, setPurRemarks] = useState('');
 
-  // Operating Expense Form Fields
-  const [expCategory, setExpCategory] = useState('Electricity (EB)');
+  // Operating Expense Form Fields - Start empty by default
+  const [expCategory, setExpCategory] = useState('');
   const [expIsCustomCategory, setExpIsCustomCategory] = useState(false);
   const [expDesc, setExpDesc] = useState('');
   const [expAmount, setExpAmount] = useState<number | ''>('');
   const [expDate, setExpDate] = useState(new Date().toISOString().split('T')[0]);
-  const [expMode, setExpMode] = useState('Net Banking');
+  const [expMode, setExpMode] = useState('');
   const [expRefNo, setExpRefNo] = useState('');
   const [expRemarks, setExpRemarks] = useState('');
 
@@ -157,15 +215,38 @@ export default function ExpenseManager({ session, pageMode, defaultSubTab }: Exp
     fetchData();
   }, [session.token]);
 
+  const purchaseCategoryOptions = useMemo(() => {
+    const customSet = new Set<string>(savedPurCategories);
+    purchases.forEach((p) => {
+      if (p.category && !DEFAULT_PURCHASE_CATEGORIES.some((d) => d.value.toLowerCase() === p.category.toLowerCase())) {
+        customSet.add(p.category);
+      }
+    });
+    const customList = Array.from(customSet).map((c) => ({ value: c, label: c }));
+    return [...DEFAULT_PURCHASE_CATEGORIES, ...customList, { value: 'OTHERS', label: 'Others' }];
+  }, [savedPurCategories, purchases]);
+
+  const expenseCategoryOptions = useMemo(() => {
+    const customSet = new Set<string>(savedExpCategories);
+    expenses.forEach((e) => {
+      if (e.category && !DEFAULT_EXPENSE_CATEGORIES.some((d) => d.value.toLowerCase() === e.category.toLowerCase())) {
+        customSet.add(e.category);
+      }
+    });
+    const customList = Array.from(customSet).map((c) => ({ value: c, label: c }));
+    return [...DEFAULT_EXPENSE_CATEGORIES, ...customList, { value: 'OTHERS', label: 'Others' }];
+  }, [savedExpCategories, expenses]);
+
   const openEditPurchase = (p: PurchaseItem) => {
     setEditingPurchaseId(p.id);
     setPurSupplier(p.supplierName || '');
     setPurItem(p.itemName);
     setPurCategory(p.category);
-    const isCustomPur = !STANDARD_PURCHASE_CATEGORIES.some((c) => c.value === p.category && c.value !== 'OTHERS');
+    const isCustomPur = !DEFAULT_PURCHASE_CATEGORIES.some((c) => c.value.toLowerCase() === (p.category || '').toLowerCase()) &&
+      !savedPurCategories.some((c) => c.toLowerCase() === (p.category || '').toLowerCase());
     setPurIsCustomCategory(isCustomPur);
     setPurQty(Number(p.quantity));
-    setPurUom(p.uom);
+    setPurUom(p.uom || '');
     setPurPrice(Number(p.unitPrice));
     setPurBillNo(p.supplierBillNo || '');
     setPurStatus(p.paymentStatus || 'PAID');
@@ -178,12 +259,13 @@ export default function ExpenseManager({ session, pageMode, defaultSubTab }: Exp
   const openEditExpense = (e: OtherExpenseItem) => {
     setEditingExpenseId(e.id);
     setExpCategory(e.category);
-    const isCustomExp = !STANDARD_EXPENSE_CATEGORIES.some((c) => c.value === e.category && c.value !== 'OTHERS');
+    const isCustomExp = !DEFAULT_EXPENSE_CATEGORIES.some((c) => c.value.toLowerCase() === (e.category || '').toLowerCase()) &&
+      !savedExpCategories.some((c) => c.toLowerCase() === (e.category || '').toLowerCase());
     setExpIsCustomCategory(isCustomExp);
     setExpDesc(e.description);
     setExpAmount(Number(e.amount));
     setExpDate(e.expenseDate ? e.expenseDate.split('T')[0] : new Date().toISOString().split('T')[0]);
-    setExpMode(e.paymentMode || 'Net Banking');
+    setExpMode(e.paymentMode || '');
     setExpRefNo(e.referenceNo || '');
     setExpRemarks(e.remarks || '');
     setFormError(null);
@@ -199,8 +281,16 @@ export default function ExpenseManager({ session, pageMode, defaultSubTab }: Exp
       setFormError('Item name is required');
       return;
     }
-    if (!purQty || purQty <= 0 || !purPrice || purPrice < 0) {
+    if (!purCategory.trim()) {
+      setFormError('Please select or specify a category');
+      return;
+    }
+    if (!purQty || Number(purQty) <= 0 || !purPrice || Number(purPrice) < 0) {
       setFormError('Valid quantity and price are required');
+      return;
+    }
+    if (!purUom.trim()) {
+      setFormError('Please select a unit of measurement');
       return;
     }
 
@@ -238,6 +328,15 @@ export default function ExpenseManager({ session, pageMode, defaultSubTab }: Exp
         throw new Error(data.error || 'Failed to save purchase');
       }
 
+      // Automatically store custom category & unit in dropdown options for future entries
+      if (purCategory) {
+        saveCustomPurchaseCategory(purCategory);
+        setSavedPurCategories(getSavedCustomPurchaseCategories());
+      }
+      if (purUom) {
+        saveCustomUnit(purUom);
+      }
+
       setNotification({
         type: 'success',
         message: data.message || `Purchase of ${purItem} saved successfully`,
@@ -247,6 +346,10 @@ export default function ExpenseManager({ session, pageMode, defaultSubTab }: Exp
       // Reset
       setPurItem('');
       setPurSupplier('');
+      setPurCategory('');
+      setPurIsCustomCategory(false);
+      setPurQty('');
+      setPurUom('');
       setPurPrice('');
       setPurBillNo('');
       setPurRemarks('');
@@ -263,11 +366,15 @@ export default function ExpenseManager({ session, pageMode, defaultSubTab }: Exp
     e.preventDefault();
     setFormError(null);
 
+    if (!expCategory.trim()) {
+      setFormError('Please select or specify an expense category');
+      return;
+    }
     if (!expDesc.trim()) {
       setFormError('Expense description is required');
       return;
     }
-    if (!expAmount || expAmount <= 0) {
+    if (!expAmount || Number(expAmount) <= 0) {
       setFormError('Valid expense amount is required');
       return;
     }
@@ -290,7 +397,7 @@ export default function ExpenseManager({ session, pageMode, defaultSubTab }: Exp
           description: expDesc,
           amount: Number(expAmount),
           expenseDate: expDate,
-          paymentMode: expMode,
+          paymentMode: expMode || undefined,
           referenceNo: expRefNo || undefined,
           remarks: expRemarks || undefined,
         }),
@@ -301,14 +408,23 @@ export default function ExpenseManager({ session, pageMode, defaultSubTab }: Exp
         throw new Error(data.error || 'Failed to save expense');
       }
 
+      // Automatically store custom expense category in dropdown options for future entries
+      if (expCategory) {
+        saveCustomExpenseCategory(expCategory);
+        setSavedExpCategories(getSavedCustomExpenseCategories());
+      }
+
       setNotification({
         type: 'success',
         message: data.message || `Expense saved successfully`,
       });
       setExpenseModalOpen(false);
       setEditingExpenseId(null);
+      setExpCategory('');
+      setExpIsCustomCategory(false);
       setExpDesc('');
       setExpAmount('');
+      setExpMode('');
       setExpRefNo('');
       setExpRemarks('');
       fetchData();
@@ -470,10 +586,10 @@ export default function ExpenseManager({ session, pageMode, defaultSubTab }: Exp
                 setEditingPurchaseId(null);
                 setPurItem('');
                 setPurSupplier('');
-                setPurCategory('Tooling');
+                setPurCategory('');
                 setPurIsCustomCategory(false);
                 setPurQty('');
-                setPurUom('pcs');
+                setPurUom('');
                 setPurPrice('');
                 setPurBillNo('');
                 setPurRemarks('');
@@ -489,10 +605,11 @@ export default function ExpenseManager({ session, pageMode, defaultSubTab }: Exp
             <button
               onClick={() => {
                 setEditingExpenseId(null);
-                setExpCategory('Electricity (EB)');
+                setExpCategory('');
                 setExpIsCustomCategory(false);
                 setExpDesc('');
                 setExpAmount('');
+                setExpMode('');
                 setExpRefNo('');
                 setExpRemarks('');
                 setFormError(null);
@@ -758,7 +875,7 @@ export default function ExpenseManager({ session, pageMode, defaultSubTab }: Exp
                     type="button"
                     onClick={() => {
                       setPurIsCustomCategory(false);
-                      setPurCategory('Tooling');
+                      setPurCategory('');
                     }}
                     title="Cancel and choose from list"
                     className="absolute right-2 p-1.5 rounded-lg text-slate-400 hover:text-slate-600 hover:bg-slate-100 transition-colors"
@@ -777,7 +894,8 @@ export default function ExpenseManager({ session, pageMode, defaultSubTab }: Exp
                       setPurCategory(val);
                     }
                   }}
-                  options={STANDARD_PURCHASE_CATEGORIES}
+                  options={purchaseCategoryOptions}
+                  placeholder="-- Select Category --"
                   searchable={false}
                 />
               )}
@@ -944,7 +1062,7 @@ export default function ExpenseManager({ session, pageMode, defaultSubTab }: Exp
                     type="button"
                     onClick={() => {
                       setExpIsCustomCategory(false);
-                      setExpCategory('Electricity (EB)');
+                      setExpCategory('');
                     }}
                     title="Cancel and choose from list"
                     className="absolute right-2 p-1.5 rounded-lg text-slate-400 hover:text-slate-600 hover:bg-slate-100 transition-colors"
@@ -963,7 +1081,8 @@ export default function ExpenseManager({ session, pageMode, defaultSubTab }: Exp
                       setExpCategory(val);
                     }
                   }}
-                  options={STANDARD_EXPENSE_CATEGORIES}
+                  options={expenseCategoryOptions}
+                  placeholder="-- Select Category --"
                   searchable={false}
                 />
               )}
@@ -1023,6 +1142,7 @@ export default function ExpenseManager({ session, pageMode, defaultSubTab }: Exp
                   { value: 'Cash', label: 'Cash' },
                   { value: 'Cheque', label: 'Cheque' },
                 ]}
+                placeholder="-- Select Payment Mode --"
                 searchable={false}
               />
             </div>

@@ -17,7 +17,7 @@ import { UserSession } from '../types';
 import DCPrintView, { DeliveryChallanData } from './DCPrintView';
 import SlideOverDrawer from './common/SlideOverDrawer';
 import CustomSelect from './common/CustomSelect';
-import CustomUnitSelect from './common/CustomUnitSelect';
+import CustomUnitSelect, { saveCustomUnit } from './common/CustomUnitSelect';
 import CustomDatePicker from './common/CustomDatePicker';
 
 interface DeliveryChallan extends DeliveryChallanData {
@@ -77,7 +77,7 @@ export default function DeliveryChallanManager({ session }: DeliveryChallanManag
         drawingNumber: '',
         partNumber: '',
         quantity: 1,
-        uom: 'nos',
+        uom: '',
         remarks: '',
       },
     ],
@@ -155,7 +155,7 @@ export default function DeliveryChallanManager({ session }: DeliveryChallanManag
           drawingNumber: '',
           partNumber: '',
           quantity: 1,
-          uom: 'nos',
+          uom: '',
           remarks: '',
         },
       ],
@@ -175,7 +175,7 @@ export default function DeliveryChallanManager({ session }: DeliveryChallanManag
       description: `${selectedMat.productName} - Part No: ${selectedMat.partNumber || selectedMat.productName}`,
       drawingNumber: selectedMat.drawingNumber || '',
       partNumber: selectedMat.partNumber || '',
-      uom: selectedMat.uom || 'nos',
+      uom: selectedMat.uom || '',
     };
     setFormData({ ...formData, items: newItems });
   };
@@ -191,7 +191,7 @@ export default function DeliveryChallanManager({ session }: DeliveryChallanManag
           drawingNumber: '',
           partNumber: '',
           quantity: 1,
-          uom: 'nos',
+          uom: '',
           remarks: '',
         },
       ],
@@ -227,7 +227,7 @@ export default function DeliveryChallanManager({ session }: DeliveryChallanManag
         drawingNumber: it.drawingNumber || '',
         partNumber: it.partNumber || '',
         quantity: it.quantity,
-        uom: it.uom || 'nos',
+        uom: it.uom || '',
         remarks: it.remarks || '',
       })) : [
         {
@@ -236,7 +236,7 @@ export default function DeliveryChallanManager({ session }: DeliveryChallanManag
           drawingNumber: '',
           partNumber: '',
           quantity: 1,
-          uom: 'nos',
+          uom: '',
           remarks: '',
         },
       ],
@@ -257,8 +257,18 @@ export default function DeliveryChallanManager({ session }: DeliveryChallanManag
       return;
     }
 
+    if (formData.items.some((item) => !item.uom || !item.uom.trim())) {
+      setFormError('Please select a unit of measurement for all items.');
+      return;
+    }
+
     try {
       setFormError(null);
+      // Automatically store any custom units in dropdown options
+      formData.items.forEach((item) => {
+        if (item.uom) saveCustomUnit(item.uom);
+      });
+
       const url = editingDc
         ? `${API_BASE_URL}/api/dcs/${editingDc.id}`
         : `${API_BASE_URL}/api/dcs`;

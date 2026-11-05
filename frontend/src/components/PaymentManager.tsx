@@ -87,7 +87,7 @@ export default function PaymentManager({ session }: PaymentManagerProps) {
   const [selectedInvoiceId, setSelectedInvoiceId] = useState('');
   const [amount, setAmount] = useState<number | ''>('');
   const [paymentDate, setPaymentDate] = useState(new Date().toISOString().split('T')[0]);
-  const [paymentMode, setPaymentMode] = useState('NEFT/RTGS');
+  const [paymentMode, setPaymentMode] = useState('');
   const [referenceNo, setReferenceNo] = useState('');
   const [remarks, setRemarks] = useState('');
 
@@ -160,7 +160,7 @@ export default function PaymentManager({ session }: PaymentManagerProps) {
     setCustomerInvoices([]);
     setAmount('');
     setPaymentDate(new Date().toISOString().split('T')[0]);
-    setPaymentMode('NEFT/RTGS');
+    setPaymentMode('');
     setReferenceNo('');
     setRemarks('');
     setFormError(null);
@@ -173,7 +173,7 @@ export default function PaymentManager({ session }: PaymentManagerProps) {
     setSelectedInvoiceId(pay.invoiceId || '');
     setAmount(Number(pay.amount));
     setPaymentDate(pay.paymentDate ? pay.paymentDate.split('T')[0] : new Date().toISOString().split('T')[0]);
-    setPaymentMode(pay.paymentMode || 'NEFT/RTGS');
+    setPaymentMode(pay.paymentMode || '');
     setReferenceNo(pay.referenceNo || '');
     setRemarks(pay.remarks || '');
     setFormError(null);
@@ -197,6 +197,10 @@ export default function PaymentManager({ session }: PaymentManagerProps) {
 
     if (!selectedCompanyId) {
       setFormError('Please select a customer company');
+      return;
+    }
+    if (!paymentMode) {
+      setFormError('Please select a payment mode');
       return;
     }
     if (!amount || amount <= 0) {
@@ -712,6 +716,7 @@ export default function PaymentManager({ session }: PaymentManagerProps) {
                   { value: 'Cash', label: 'Cash' },
                   { value: 'IMPS', label: 'IMPS' },
                 ]}
+                placeholder="-- Select Payment Mode --"
                 searchable={false}
               />
             </div>

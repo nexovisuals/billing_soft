@@ -17,7 +17,7 @@ import {
 import { UserSession } from '../types';
 import SlideOverDrawer from './common/SlideOverDrawer';
 import CustomSelect from './common/CustomSelect';
-import CustomUnitSelect from './common/CustomUnitSelect';
+import CustomUnitSelect, { saveCustomUnit } from './common/CustomUnitSelect';
 
 interface StockSummaryItem {
   companyId: string;
@@ -89,12 +89,12 @@ export default function StockManager({ session }: StockManagerProps) {
     remarks: '',
   });
 
-  // Adjust Form State
+  // Adjust Form State - Start empty by default
   const [adjustForm, setAdjustForm] = useState({
     companyId: '',
-    movementType: 'ISSUED_MACHINING',
+    movementType: '',
     quantityOut: '',
-    uom: 'kg',
+    uom: '',
     remarks: '',
   });
 
@@ -187,6 +187,15 @@ export default function StockManager({ session }: StockManagerProps) {
     }
 
     try {
+      if (!inwardForm.companyId) {
+        setFormError('Please select a customer company.');
+        return;
+      }
+      if (!inwardForm.uom.trim()) {
+        setFormError('Please select a unit of measurement.');
+        return;
+      }
+
       setFormError(null);
       const url = editingReceiptId
         ? `${API_BASE_URL}/api/stock/receipts/${editingReceiptId}`
@@ -209,6 +218,10 @@ export default function StockManager({ session }: StockManagerProps) {
       const data = await res.json();
       if (!res.ok) {
         throw new Error(data.error || 'Failed to record receipt');
+      }
+
+      if (inwardForm.uom) {
+        saveCustomUnit(inwardForm.uom);
       }
 
       setNotification({
@@ -241,8 +254,20 @@ export default function StockManager({ session }: StockManagerProps) {
 
   const handleAdjustSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (!adjustForm.companyId || !adjustForm.quantityOut) {
-      setFormError('Company and outward/scrap quantity are required.');
+    if (!adjustForm.companyId) {
+      setFormError('Please select a customer company.');
+      return;
+    }
+    if (!adjustForm.movementType) {
+      setFormError('Please select a movement operation.');
+      return;
+    }
+    if (!adjustForm.quantityOut || parseFloat(adjustForm.quantityOut) <= 0) {
+      setFormError('Please enter a valid outward/scrap quantity.');
+      return;
+    }
+    if (!adjustForm.uom.trim()) {
+      setFormError('Please select a unit of measurement.');
       return;
     }
 
@@ -269,6 +294,10 @@ export default function StockManager({ session }: StockManagerProps) {
         throw new Error(data.error || 'Failed to record movement');
       }
 
+      if (adjustForm.uom) {
+        saveCustomUnit(adjustForm.uom);
+      }
+
       setNotification({
         type: 'success',
         message: `Stock movement recorded! New Balance: ${data.newBalance} ${adjustForm.uom || ''}`.trim(),
@@ -277,10 +306,10 @@ export default function StockManager({ session }: StockManagerProps) {
 
       setAdjustModalOpen(false);
       setAdjustForm({
-        companyId: selectedCompanyId || '',
-        movementType: 'ISSUED_MACHINING',
+        companyId: '',
+        movementType: '',
         quantityOut: '',
-        uom: 'kg',
+        uom: '',
         remarks: '',
       });
       fetchStockSummary();
@@ -431,12 +460,11 @@ export default function StockManager({ session }: StockManagerProps) {
         <div className="flex items-center gap-2.5">
           <button
             onClick={() => {
-              const defaultUom = receipts.find(r => r.company.id === selectedCompanyId)?.uom || 'kg';
               setAdjustForm({
-                companyId: selectedCompanyId || (companies[0]?.id || ''),
-                movementType: 'ISSUED_MACHINING',
+                companyId: '',
+                movementType: '',
                 quantityOut: '',
-                uom: defaultUom,
+                uom: '',
                 remarks: '',
               });
               setFormError(null);
@@ -929,6 +957,7 @@ export default function StockManager({ session }: StockManagerProps) {
                 { value: 'SCRAP_WASTAGE', label: 'Machining Scrap' },
                 { value: 'RETURNED_RAW', label: 'Return Raw Stock to Customer' },
               ]}
+              placeholder="-- Select Movement Operation --"
               searchable={false}
             />
           </div>
